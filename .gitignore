@@ -1,13 +1,49 @@
-# Python
+# --- Python: bytecode y cachés ---
 __pycache__/
 *.py[cod]
-.venv/
-*.egg-info/
-dist/
-build/
+*$py.class
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
-# Editores
-/.vscode
+# --- Entornos virtuales ---
+.venv/
+venv/
+env/
+
+# --- Empaquetado y distribución ---
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# --- Traducciones compiladas (se generan desde los .po) ---
+*.mo
+
+# --- Secretos y configuración local ---
+.env
+.env.*
+*.local.json
+.claude/settings.local.json
+
+# --- Salidas de pruebas manuales del editor ---
+/pruebas_salida/
+*.bra
+*.mp3
+
+# --- Editores e IDEs ---
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- Sistema operativo ---
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Registros ---
+*.log
