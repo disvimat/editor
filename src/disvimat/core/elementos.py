@@ -15,6 +15,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 #: (teclas, glifos, etiquetas, braille...) se refieren a ellos.
 ID_PATRON = r"^[a-z][a-z0-9_]*$"
 
+#: Elemento del catálogo que representa un hueco vacío (presentación y
+#: verbalización); no es editable y no tiene pulsación asignada.
+ID_HUECO = "hueco"
+
 
 class Registro(BaseModel):
     """Base de todo registro de tabla: referencia estable por ``id``."""

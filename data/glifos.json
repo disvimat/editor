@@ -16,11 +16,11 @@
     { "id": "mas_menos", "glifo": "±" },
     { "id": "porcentaje", "glifo": "%" },
     { "id": "coma_decimal", "glifo": "," },
-    { "id": "fraccion", "glifo": "∕" },
-    { "id": "potencia", "glifo": "^" },
-    { "id": "subindice", "glifo": "_" },
-    { "id": "raiz", "glifo": "√" },
-    { "id": "raiz_indice", "glifo": "√" },
-    { "id": "valor_absoluto", "glifo": "|" }
+    { "id": "fraccion", "glifo": "∕", "plantilla": "({1}∕{2})" },
+    { "id": "potencia", "glifo": "^", "plantilla": "{1}^({2})" },
+    { "id": "subindice", "glifo": "_", "plantilla": "{1}_({2})" },
+    { "id": "raiz", "glifo": "√", "plantilla": "√({1})" },
+    { "id": "raiz_indice", "glifo": "√", "plantilla": "√[{2}]({1})" },
+    { "id": "hueco", "glifo": "□" }
   ]
 }

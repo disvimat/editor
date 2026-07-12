@@ -34,9 +34,15 @@ class EntradaTecla(Registro):
 
 
 class EntradaGlifo(Registro):
-    """B1: glifo con que se presenta un signo o estructura en la edición lineal."""
+    """B1: glifo con que se presenta un signo o estructura en la edición lineal.
+
+    Las estructuras pueden llevar ``plantilla`` de presentación lineal con
+    marcas ``{1}``, ``{2}``... para sus huecos: ``"({1}∕{2})"`` en la fracción.
+    Sin plantilla, la presentación es genérica: ``glifo(h1;h2)``.
+    """
 
     glifo: str
+    plantilla: str | None = None
 
 
 #: Partes admitidas en la verbalización lineal de una estructura.

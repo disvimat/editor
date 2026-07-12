@@ -24,12 +24,12 @@
     {
       "id": "potencia",
       "etiqueta": "potencia",
-      "partes": { "inicio": "elevado a", "fin": "fin de exponente" }
+      "partes": { "separador": "elevado a", "fin": "fin de exponente" }
     },
     {
       "id": "subindice",
       "etiqueta": "subíndice",
-      "partes": { "inicio": "subíndice", "fin": "fin de subíndice" }
+      "partes": { "separador": "subíndice", "fin": "fin de subíndice" }
     },
     {
       "id": "raiz",
@@ -39,13 +39,9 @@
     {
       "id": "raiz_indice",
       "etiqueta": "raíz",
-      "partes": { "inicio": "raíz de índice", "separador": "de", "fin": "fin de raíz" }
+      "partes": { "inicio": "raíz", "separador": "de índice", "fin": "fin de raíz" }
     },
-    {
-      "id": "valor_absoluto",
-      "etiqueta": "valor absoluto",
-      "partes": { "inicio": "valor absoluto de", "fin": "fin de valor absoluto" }
-    },
+    { "id": "hueco", "etiqueta": "hueco" },
     { "id": "izquierda", "etiqueta": "izquierda" },
     { "id": "derecha", "etiqueta": "derecha" },
     { "id": "inicio_linea", "etiqueta": "inicio de línea" },
