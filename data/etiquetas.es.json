@@ -1,0 +1,63 @@
+{
+  "tabla": "etiquetas",
+  "version": 1,
+  "lengua": "es",
+  "entradas": [
+    { "id": "mas", "etiqueta": "más" },
+    { "id": "menos", "etiqueta": "menos" },
+    { "id": "por", "etiqueta": "por" },
+    { "id": "entre", "etiqueta": "entre" },
+    { "id": "igual", "etiqueta": "igual a" },
+    { "id": "distinto", "etiqueta": "distinto de" },
+    { "id": "menor", "etiqueta": "menor que" },
+    { "id": "mayor", "etiqueta": "mayor que" },
+    { "id": "menor_igual", "etiqueta": "menor o igual que" },
+    { "id": "mayor_igual", "etiqueta": "mayor o igual que" },
+    { "id": "mas_menos", "etiqueta": "más menos" },
+    { "id": "porcentaje", "etiqueta": "por ciento" },
+    { "id": "coma_decimal", "etiqueta": "coma" },
+    {
+      "id": "fraccion",
+      "etiqueta": "fracción",
+      "partes": { "inicio": "fracción", "separador": "entre", "fin": "fin de fracción" }
+    },
+    {
+      "id": "potencia",
+      "etiqueta": "potencia",
+      "partes": { "inicio": "elevado a", "fin": "fin de exponente" }
+    },
+    {
+      "id": "subindice",
+      "etiqueta": "subíndice",
+      "partes": { "inicio": "subíndice", "fin": "fin de subíndice" }
+    },
+    {
+      "id": "raiz",
+      "etiqueta": "raíz cuadrada",
+      "partes": { "inicio": "raíz cuadrada de", "fin": "fin de raíz" }
+    },
+    {
+      "id": "raiz_indice",
+      "etiqueta": "raíz",
+      "partes": { "inicio": "raíz de índice", "separador": "de", "fin": "fin de raíz" }
+    },
+    {
+      "id": "valor_absoluto",
+      "etiqueta": "valor absoluto",
+      "partes": { "inicio": "valor absoluto de", "fin": "fin de valor absoluto" }
+    },
+    { "id": "izquierda", "etiqueta": "izquierda" },
+    { "id": "derecha", "etiqueta": "derecha" },
+    { "id": "inicio_linea", "etiqueta": "inicio de línea" },
+    { "id": "fin_linea", "etiqueta": "fin de línea" },
+    { "id": "entrar_estructura", "etiqueta": "entrar en la estructura" },
+    { "id": "salir_estructura", "etiqueta": "salir de la estructura" },
+    { "id": "siguiente_hueco", "etiqueta": "siguiente hueco" },
+    { "id": "borrar", "etiqueta": "borrar" },
+    { "id": "borrar_atras", "etiqueta": "borrar hacia atrás" },
+    { "id": "deshacer", "etiqueta": "deshacer" },
+    { "id": "rehacer", "etiqueta": "rehacer" },
+    { "id": "leer_elemento", "etiqueta": "leer elemento" },
+    { "id": "leer_linea", "etiqueta": "leer línea" }
+  ]
+}

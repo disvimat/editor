@@ -1,0 +1,26 @@
+{
+  "tabla": "glifos",
+  "version": 1,
+  "lengua": null,
+  "entradas": [
+    { "id": "mas", "glifo": "+" },
+    { "id": "menos", "glifo": "−" },
+    { "id": "por", "glifo": "×" },
+    { "id": "entre", "glifo": "÷" },
+    { "id": "igual", "glifo": "=" },
+    { "id": "distinto", "glifo": "≠" },
+    { "id": "menor", "glifo": "<" },
+    { "id": "mayor", "glifo": ">" },
+    { "id": "menor_igual", "glifo": "≤" },
+    { "id": "mayor_igual", "glifo": "≥" },
+    { "id": "mas_menos", "glifo": "±" },
+    { "id": "porcentaje", "glifo": "%" },
+    { "id": "coma_decimal", "glifo": "," },
+    { "id": "fraccion", "glifo": "∕" },
+    { "id": "potencia", "glifo": "^" },
+    { "id": "subindice", "glifo": "_" },
+    { "id": "raiz", "glifo": "√" },
+    { "id": "raiz_indice", "glifo": "√" },
+    { "id": "valor_absoluto", "glifo": "|" }
+  ]
+}

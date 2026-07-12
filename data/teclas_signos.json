@@ -1,0 +1,26 @@
+{
+  "tabla": "teclas_signos",
+  "version": 1,
+  "lengua": null,
+  "entradas": [
+    { "id": "mas", "teclas": "+" },
+    { "id": "menos", "teclas": "-" },
+    { "id": "por", "teclas": "*" },
+    { "id": "entre", "teclas": "/" },
+    { "id": "igual", "teclas": "=" },
+    { "id": "distinto", "teclas": "Ctrl+=" },
+    { "id": "menor", "teclas": "<" },
+    { "id": "mayor", "teclas": ">" },
+    { "id": "menor_igual", "teclas": "Ctrl+<" },
+    { "id": "mayor_igual", "teclas": "Ctrl+>" },
+    { "id": "mas_menos", "teclas": "Ctrl+M" },
+    { "id": "porcentaje", "teclas": "%" },
+    { "id": "coma_decimal", "teclas": "," },
+    { "id": "fraccion", "teclas": "Ctrl+F" },
+    { "id": "potencia", "teclas": "Ctrl+P" },
+    { "id": "subindice", "teclas": "Ctrl+B" },
+    { "id": "raiz", "teclas": "Ctrl+R" },
+    { "id": "raiz_indice", "teclas": "Ctrl+Shift+R" },
+    { "id": "valor_absoluto", "teclas": "Ctrl+Shift+V" }
+  ]
+}
