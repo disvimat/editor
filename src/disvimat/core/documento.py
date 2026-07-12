@@ -115,6 +115,12 @@ class Documento:
         else:
             self._cursor.indice += 1
 
+    def cargar(self, nodos: list[Nodo]) -> None:
+        """Sustituye el contenido completo (importaciones); es deshacible."""
+        self._guardar_instantanea()
+        self.raiz = nodos
+        self._cursor = _Cursor(indice=len(nodos))
+
     def borrar_atras(self) -> Nodo | None:
         """Borra el nodo a la izquierda del cursor y lo devuelve."""
         if self._cursor.indice == 0:

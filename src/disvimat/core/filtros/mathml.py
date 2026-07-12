@@ -47,6 +47,17 @@ class FiltroMathML:
             raise ErrorDeFiltro(f"MathML mal formado: {error}") from error
         return self._secuencia(raiz)
 
+    def desde_xhtml(self, texto_xhtml: str) -> list[Nodo]:
+        """Extrae la primera expresión ``<math>`` de un documento XHTML (D1)."""
+        try:
+            raiz = ET.fromstring(texto_xhtml)
+        except ET.ParseError as error:
+            raise ErrorDeFiltro(f"XHTML mal formado: {error}") from error
+        for elemento in raiz.iter():
+            if _nombre(elemento) == "math":
+                return self._secuencia(elemento)
+        raise ErrorDeFiltro("el documento no contiene ninguna expresión <math>")
+
     # --- interno ------------------------------------------------------------
 
     def _secuencia(self, contenedor: ET.Element) -> list[Nodo]:

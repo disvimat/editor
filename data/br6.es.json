@@ -1,0 +1,31 @@
+{
+  "tabla": "br6",
+  "version": 1,
+  "lengua": "es",
+  "entradas": [
+    { "id": "mas", "celdas": ["2-3-5"] },
+    { "id": "menos", "celdas": ["3-6"] },
+    { "id": "por", "celdas": ["2-3-6"] },
+    { "id": "entre", "celdas": ["2-5-6"] },
+    { "id": "igual", "celdas": ["2-3-5-6"] },
+    { "id": "distinto", "celdas": ["4-5", "2-3-5-6"] },
+    { "id": "menor", "celdas": ["2-4-6"] },
+    { "id": "mayor", "celdas": ["1-3-5"] },
+    { "id": "menor_igual", "celdas": ["2-4-6", "2-3-5-6"] },
+    { "id": "mayor_igual", "celdas": ["1-3-5", "2-3-5-6"] },
+    { "id": "mas_menos", "celdas": ["2-3-5", "3-6"] },
+    { "id": "porcentaje", "celdas": ["4-5-6", "3-5-6"] },
+    { "id": "coma_decimal", "celdas": ["2"] },
+    { "id": "hueco", "celdas": ["1-2-3-4-5-6"] },
+    { "id": "prefijo_numero", "celdas": ["3-4-5-6"] },
+    { "id": "mayuscula", "celdas": ["4-6"] },
+    { "id": "fraccion", "partes": { "separador": ["3-4"] } },
+    { "id": "potencia", "partes": { "separador": ["1-6"] } },
+    { "id": "subindice", "partes": { "separador": ["1-2-6"] } },
+    { "id": "raiz", "partes": { "inicio": ["1-4-6"], "fin": ["3-5-6"] } },
+    {
+      "id": "raiz_indice",
+      "partes": { "inicio": ["1-4-6"], "separador": ["1-6"], "fin": ["3-5-6"] }
+    }
+  ]
+}

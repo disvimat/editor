@@ -9,6 +9,7 @@ _CODIGO = (
     "import disvimat.core.documento, disvimat.core.editor, disvimat.core.teclado; "
     "import disvimat.core.presentacion, disvimat.core.verbalizacion; "
     "import disvimat.core.filtros.mathml, disvimat.export.xhtml; "
+    "import disvimat.core.transcripcion.braille, disvimat.core.i18n; "
     "prohibidos = sorted({m.split('.')[0] for m in sys.modules} "
     "& {'wx', 'fastapi', 'flask', 'PySide6', 'PyQt6', 'tkinter'}); "
     "print(prohibidos); "

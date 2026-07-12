@@ -95,3 +95,35 @@ def test_deshacer_y_rehacer(editor: Editor) -> None:
 def test_pulsacion_no_asignada(editor: Editor) -> None:
     assert editor.pulsar("F9") is None
     assert editor.pulsar("Ctrl+Alt+Q") is None
+
+
+def test_bloque_numerico(editor: Editor) -> None:
+    editor.escribir("1")
+    resultado = editor.pulsar("NumAdd")
+    assert resultado is not None
+    assert resultado.texto == "1+"
+    assert resultado.verbalizacion == "más"
+
+
+def test_importar_lo_exportado(editor: Editor) -> None:
+    from disvimat.core.filtros.mathml import FiltroMathML
+    from disvimat.export.xhtml import ExportadorXHTML
+
+    editor.escribir("1")
+    editor.pulsar("+")
+    editor.pulsar("Ctrl+F")
+    editor.escribir("2")
+    editor.pulsar("Tab")
+    editor.escribir("3")
+    documento = ExportadorXHTML(editor.catalogo).documento_xhtml(editor.documento.raiz)
+
+    receptor = crear_editor(DATOS)
+    resultado = receptor.cargar(FiltroMathML(receptor.catalogo).desde_xhtml(documento))
+    assert resultado.texto == "1+(2∕3)"
+    assert resultado.posicion == len(resultado.texto)
+    assert resultado.verbalizacion == "1 más fracción 2 entre 3 fin de fracción"
+
+    # la importación es deshacible
+    deshecho = receptor.pulsar("Ctrl+Z")
+    assert deshecho is not None
+    assert deshecho.texto == ""
