@@ -21,7 +21,7 @@
     { "id": "subindice", "tipo": "estructura", "categoria": "algebra", "mathml": "msub", "aridad": 2, "nivel": 2 },
     { "id": "raiz", "tipo": "estructura", "categoria": "algebra", "mathml": "msqrt", "aridad": 1, "nivel": 2 },
     { "id": "raiz_indice", "tipo": "estructura", "categoria": "algebra", "mathml": "mroot", "aridad": 2, "nivel": 3 },
-    { "id": "valor_absoluto", "tipo": "estructura", "categoria": "algebra", "aridad": 1, "nivel": 3 },
+    { "id": "hueco", "tipo": "signo", "categoria": "editor" },
     { "id": "izquierda", "tipo": "comando", "categoria": "navegacion" },
     { "id": "derecha", "tipo": "comando", "categoria": "navegacion" },
     { "id": "inicio_linea", "tipo": "comando", "categoria": "navegacion" },

@@ -15,11 +15,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+desktop = [
+    "wxPython>=4.2",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",
     "mypy>=1.10",
 ]
+
+[project.gui-scripts]
+disvimat-escritorio = "disvimat.desktop.app:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/disvimat"]
@@ -38,6 +44,17 @@ known-first-party = ["disvimat"]
 strict = true
 files = ["src"]
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["wx", "wx.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# wx no publica tipos: en el adaptador de escritorio se relajan las
+# comprobaciones que dependen de ellos. El núcleo sigue en estricto.
+module = "disvimat.desktop.*"
+disallow_subclassing_any = false
+disallow_untyped_calls = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

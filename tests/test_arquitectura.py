@@ -6,6 +6,9 @@ import sys
 _CODIGO = (
     "import sys; "
     "import disvimat.core.integridad, disvimat.core.tablas, disvimat.core.elementos; "
+    "import disvimat.core.documento, disvimat.core.editor, disvimat.core.teclado; "
+    "import disvimat.core.presentacion, disvimat.core.verbalizacion; "
+    "import disvimat.core.filtros.mathml, disvimat.export.xhtml; "
     "prohibidos = sorted({m.split('.')[0] for m in sys.modules} "
     "& {'wx', 'fastapi', 'flask', 'PySide6', 'PyQt6', 'tkinter'}); "
     "print(prohibidos); "

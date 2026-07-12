@@ -20,7 +20,6 @@
     { "id": "potencia", "teclas": "Ctrl+P" },
     { "id": "subindice", "teclas": "Ctrl+B" },
     { "id": "raiz", "teclas": "Ctrl+R" },
-    { "id": "raiz_indice", "teclas": "Ctrl+Shift+R" },
-    { "id": "valor_absoluto", "teclas": "Ctrl+Shift+V" }
+    { "id": "raiz_indice", "teclas": "Ctrl+Shift+R" }
   ]
 }
