@@ -10,17 +10,19 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from disvimat.core.documento import Caracter, Documento, Estructura, Signo
+from disvimat.core.documento import Caracter, Documento, Estructura, Nodo, Signo
 from disvimat.core.elementos import ID_HUECO, TipoElemento
 from disvimat.core.presentacion import Presentador
 from disvimat.core.tablas import (
     Catalogo,
     EntradaEtiqueta,
     EntradaGlifo,
+    EntradaPerfil,
     EntradaTecla,
     Tabla,
     cargar_tabla,
     dir_datos,
+    ruta_tabla_lengua,
 )
 from disvimat.core.teclado import Teclado
 from disvimat.core.verbalizacion import Verbalizador
@@ -92,6 +94,11 @@ class Editor:
 
     def estado(self) -> Resultado:
         """El estado actual sin ejecutar ninguna acción (lectura de línea)."""
+        return self._resultado(self._cmd_leer_linea())
+
+    def cargar(self, nodos: list[Nodo]) -> Resultado:
+        """Sustituye el contenido del documento (importaciones D); deshacible."""
+        self.documento.cargar(nodos)
         return self._resultado(self._cmd_leer_linea())
 
     # --- comandos ------------------------------------------------------------
@@ -174,23 +181,34 @@ class Editor:
         return Resultado(texto=texto, posicion=posicion, verbalizacion=verbalizacion)
 
 
-def crear_editor(directorio: Path | None = None, lengua: str = "es") -> Editor:
-    """Construye un editor cargando todas las tablas del directorio de datos."""
+def crear_editor(
+    directorio: Path | None = None, lengua: str = "es", perfil: str | None = None
+) -> Editor:
+    """Construye un editor cargando todas las tablas del directorio de datos.
+
+    ``lengua`` resuelve las tablas dependientes de la lengua (con reserva
+    al español, E6); ``perfil`` limita los elementos por nivel (A7).
+    """
     directorio = directorio or dir_datos()
     catalogo = Catalogo.cargar(directorio / "elementos.json")
-    teclas_signos: Tabla[EntradaTecla] = cargar_tabla(
-        directorio / "teclas_signos.json", EntradaTecla
-    )
-    teclas_comandos: Tabla[EntradaTecla] = cargar_tabla(
-        directorio / "teclas_comandos.json", EntradaTecla
-    )
+    nivel: int | None = None
+    if perfil is not None:
+        perfiles: Tabla[EntradaPerfil] = cargar_tabla(directorio / "perfiles.json", EntradaPerfil)
+        niveles = {entrada.id: entrada.nivel for entrada in perfiles.entradas}
+        if perfil not in niveles:
+            raise ValueError(f"perfil desconocido: {perfil!r}")
+        nivel = niveles[perfil]
+    tablas_de_teclas: list[Tabla[EntradaTecla]] = [
+        cargar_tabla(directorio / nombre, EntradaTecla)
+        for nombre in ("teclas_signos.json", "teclas_comandos.json", "teclas_numpad.json")
+    ]
     glifos: Tabla[EntradaGlifo] = cargar_tabla(directorio / "glifos.json", EntradaGlifo)
     etiquetas: Tabla[EntradaEtiqueta] = cargar_tabla(
-        directorio / f"etiquetas.{lengua}.json", EntradaEtiqueta
+        ruta_tabla_lengua(directorio, "etiquetas", lengua), EntradaEtiqueta
     )
     return Editor(
         catalogo,
-        Teclado(catalogo, teclas_signos, teclas_comandos),
+        Teclado(catalogo, *tablas_de_teclas, nivel=nivel),
         Presentador(glifos),
         Verbalizador(etiquetas),
     )

@@ -28,8 +28,19 @@ estos archivos: no hay que tocar código Python.
 | `elementos.json` | — (decisión "a") | catálogo: id, tipo, categoría, MathML/Unicode, aridad, nivel |
 | `teclas_signos.json` | A2 | signo/estructura → pulsación |
 | `teclas_comandos.json` | A3 | comando → pulsación |
-| `glifos.json` | B1 | signo/estructura → glifo de presentación lineal |
+| `teclas_numpad.json` | A4 | pulsaciones alternativas en el bloque numérico |
+| `perfiles.json` | A7 | perfiles de usuario → nivel máximo de elementos |
+| `glifos.json` | B1 | signo/estructura → glifo de presentación lineal (con `plantilla` en estructuras) |
 | `etiquetas.es.json` | B2 | elemento → etiqueta hablada (con `partes` inicio/separador/fin en estructuras) |
+| `br6.es.json` | B5 | elemento → celdas braille de 6 puntos (con `partes` en estructuras) |
+| `br6_texto.es.json` | B5 | letra/dígito → celdas braille de 6 puntos |
+
+**Aviso braille**: los valores de `br6.es.json` son provisionales y
+deben revisarse contra la signografía matemática de la CBE (Comisión
+Braille Española) antes de darlos por buenos; corregirlos es editar el
+JSON, sin tocar código. La exportación .BRA usa de momento la
+codificación ASCII NABCC (constante en
+`src/disvimat/core/transcripcion/braille.py`).
 
 ## Convenciones
 

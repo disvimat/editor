@@ -42,6 +42,8 @@
       "partes": { "inicio": "raíz", "separador": "de índice", "fin": "fin de raíz" }
     },
     { "id": "hueco", "etiqueta": "hueco" },
+    { "id": "prefijo_numero", "etiqueta": "número" },
+    { "id": "mayuscula", "etiqueta": "mayúscula" },
     { "id": "izquierda", "etiqueta": "izquierda" },
     { "id": "derecha", "etiqueta": "derecha" },
     { "id": "inicio_linea", "etiqueta": "inicio de línea" },

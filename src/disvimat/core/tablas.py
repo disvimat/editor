@@ -70,9 +70,47 @@ class EntradaEtiqueta(Registro):
 
 
 class EntradaBraille(Registro):
-    """B3/B5: correspondencia con celdas braille (puntos, p. ej. "1-2-5")."""
+    """B3/B5: correspondencia de un elemento con celdas braille.
 
+    Una celda se escribe con sus puntos ("1-4-5"; "" es la celda en
+    blanco). Los signos llevan ``celdas``; las estructuras llevan
+    ``partes`` (inicio/separador/fin), cada una con su lista de celdas.
+    """
+
+    celdas: list[str] | None = None
+    partes: dict[str, list[str]] | None = None
+
+    @field_validator("partes")
+    @classmethod
+    def _claves_de_partes(cls, partes: dict[str, list[str]] | None) -> dict[str, list[str]] | None:
+        if partes:
+            desconocidas = set(partes) - PARTES_VALIDAS
+            if desconocidas:
+                raise ValueError(f"partes desconocidas: {sorted(desconocidas)}")
+        return partes
+
+    @model_validator(mode="after")
+    def _algo_que_transcribir(self) -> Self:
+        if self.celdas is None and self.partes is None:
+            raise ValueError(f"{self.id!r} necesita celdas o partes")
+        return self
+
+
+class EntradaBrailleTexto(Registro):
+    """B5: correspondencia de un carácter de texto (letra, dígito) con celdas.
+
+    El ``id`` es descriptivo ("letra_a", "digito_0", "espacio"); la clave
+    de búsqueda real es ``caracter``. Tabla dependiente de la lengua.
+    """
+
+    caracter: str = Field(min_length=1, max_length=1)
     celdas: list[str] = Field(min_length=1)
+
+
+class EntradaPerfil(Registro):
+    """A7: perfil de usuario; limita los elementos disponibles por nivel."""
+
+    nivel: int = Field(ge=1)
 
 
 class Tabla[E: Registro](BaseModel):
@@ -134,6 +172,18 @@ class Catalogo:
 
     def por_tipo(self, tipo: TipoElemento) -> list[Elemento]:
         return [elemento for elemento in self if elemento.tipo is tipo]
+
+
+def ruta_tabla_lengua(directorio: Path, nombre: str, lengua: str) -> Path:
+    """Ruta de una tabla dependiente de la lengua, con reserva al español.
+
+    Busca ``nombre.<lengua>.json``; si no existe, devuelve la versión
+    en español, que es la lengua de referencia del proyecto (E6).
+    """
+    ruta = directorio / f"{nombre}.{lengua}.json"
+    if ruta.exists():
+        return ruta
+    return directorio / f"{nombre}.es.json"
 
 
 def dir_datos() -> Path:

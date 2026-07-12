@@ -21,6 +21,8 @@
     { "id": "subindice", "glifo": "_", "plantilla": "{1}_({2})" },
     { "id": "raiz", "glifo": "√", "plantilla": "√({1})" },
     { "id": "raiz_indice", "glifo": "√", "plantilla": "√[{2}]({1})" },
-    { "id": "hueco", "glifo": "□" }
+    { "id": "hueco", "glifo": "□" },
+    { "id": "prefijo_numero", "glifo": "#" },
+    { "id": "mayuscula", "glifo": "^" }
   ]
 }
