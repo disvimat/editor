@@ -9,7 +9,7 @@ description = "Editor científico accesible DISVIMAT (matemáticas y química) p
 readme = "README.md"
 license = "GPL-2.0-only"
 requires-python = ">=3.12"
-authors = [{ name = "Carlos Daniel Ondó Angue", email = "info@iataccess.org" }]
+authors = [{ name = "Carlos Daniel Ondo Angue", email = "info@iataccess.org" }]
 dependencies = [
     "pydantic>=2.7",
 ]
