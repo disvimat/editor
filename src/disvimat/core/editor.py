@@ -10,6 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from disvimat.core.calculadora import Calculadora, ErrorDeCalculo
 from disvimat.core.documento import Caracter, Documento, Estructura, Nodo, Signo
 from disvimat.core.elementos import ID_HUECO, TipoElemento
 from disvimat.core.presentacion import Presentador
@@ -17,6 +18,7 @@ from disvimat.core.tablas import (
     Catalogo,
     EntradaEtiqueta,
     EntradaGlifo,
+    EntradaMensaje,
     EntradaPerfil,
     EntradaTecla,
     Tabla,
@@ -26,6 +28,9 @@ from disvimat.core.tablas import (
 )
 from disvimat.core.teclado import Teclado
 from disvimat.core.verbalizacion import Verbalizador
+
+#: Id de mensaje del bloqueo del profesor (A9); vive en la tabla mensajes.
+MSG_CALCULADORA_BLOQUEADA = "calculadora_bloqueada"
 
 
 @dataclass(frozen=True)
@@ -46,12 +51,19 @@ class Editor:
         teclado: Teclado,
         presentador: Presentador,
         verbalizador: Verbalizador,
+        calculadora: Calculadora,
+        mensajes: dict[str, str],
+        *,
+        calculadora_permitida: bool = True,
     ) -> None:
         self.catalogo = catalogo
         self.documento = Documento()
         self._teclado = teclado
         self._presentador = presentador
         self._verbalizador = verbalizador
+        self._calculadora = calculadora
+        self._mensajes = mensajes
+        self._calculadora_permitida = calculadora_permitida
         self._comandos: dict[str, Callable[[], str]] = {
             "izquierda": self._cmd_izquierda,
             "derecha": self._cmd_derecha,
@@ -66,6 +78,7 @@ class Editor:
             "rehacer": self._cmd_rehacer,
             "leer_elemento": self._leer_actual,
             "leer_linea": self._cmd_leer_linea,
+            "calcular": self._cmd_calcular,
         }
 
     # --- API para las interfaces -------------------------------------------
@@ -167,8 +180,21 @@ class Editor:
         self.documento.rehacer()
         return f"{self._verbalizador.etiqueta('rehacer')}: {self._cmd_leer_linea()}"
 
+    def _cmd_calcular(self) -> str:
+        """Calcula la expresión (A8), respetando el bloqueo del profesor (A9)."""
+        if not self._calculadora_permitida:
+            return self._mensaje(MSG_CALCULADORA_BLOQUEADA)
+        try:
+            valor = self._calculadora.evaluar(self.documento.raiz)
+        except ErrorDeCalculo as error:
+            return self._mensaje(error.id_mensaje)
+        return f"{self._verbalizador.etiqueta('calcular')}: {valor}"
+
     def _cmd_leer_linea(self) -> str:
         return self._verbalizador.secuencia(self.documento.raiz)
+
+    def _mensaje(self, id_mensaje: str) -> str:
+        return self._mensajes.get(id_mensaje, id_mensaje)
 
     def _leer_actual(self) -> str:
         nodo = self.documento.nodo_derecha()
@@ -192,12 +218,14 @@ def crear_editor(
     directorio = directorio or dir_datos()
     catalogo = Catalogo.cargar(directorio / "elementos.json")
     nivel: int | None = None
+    calculadora_permitida = True
     if perfil is not None:
         perfiles: Tabla[EntradaPerfil] = cargar_tabla(directorio / "perfiles.json", EntradaPerfil)
-        niveles = {entrada.id: entrada.nivel for entrada in perfiles.entradas}
-        if perfil not in niveles:
+        por_id = {entrada.id: entrada for entrada in perfiles.entradas}
+        if perfil not in por_id:
             raise ValueError(f"perfil desconocido: {perfil!r}")
-        nivel = niveles[perfil]
+        nivel = por_id[perfil].nivel
+        calculadora_permitida = por_id[perfil].calculadora
     tablas_de_teclas: list[Tabla[EntradaTecla]] = [
         cargar_tabla(directorio / nombre, EntradaTecla)
         for nombre in ("teclas_signos.json", "teclas_comandos.json", "teclas_numpad.json")
@@ -206,9 +234,16 @@ def crear_editor(
     etiquetas: Tabla[EntradaEtiqueta] = cargar_tabla(
         ruta_tabla_lengua(directorio, "etiquetas", lengua), EntradaEtiqueta
     )
+    mensajes_tabla: Tabla[EntradaMensaje] = cargar_tabla(
+        ruta_tabla_lengua(directorio, "mensajes", lengua), EntradaMensaje
+    )
+    mensajes = {entrada.id: entrada.texto for entrada in mensajes_tabla.entradas}
     return Editor(
         catalogo,
         Teclado(catalogo, *tablas_de_teclas, nivel=nivel),
         Presentador(glifos),
         Verbalizador(etiquetas),
+        Calculadora(),
+        mensajes,
+        calculadora_permitida=calculadora_permitida,
     )

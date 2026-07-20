@@ -36,6 +36,7 @@
     { "id": "deshacer", "tipo": "comando", "categoria": "edicion" },
     { "id": "rehacer", "tipo": "comando", "categoria": "edicion" },
     { "id": "leer_elemento", "tipo": "comando", "categoria": "lectura" },
-    { "id": "leer_linea", "tipo": "comando", "categoria": "lectura" }
+    { "id": "leer_linea", "tipo": "comando", "categoria": "lectura" },
+    { "id": "calcular", "tipo": "comando", "categoria": "calculo" }
   ]
 }

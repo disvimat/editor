@@ -56,6 +56,7 @@
     { "id": "deshacer", "etiqueta": "deshacer" },
     { "id": "rehacer", "etiqueta": "rehacer" },
     { "id": "leer_elemento", "etiqueta": "leer elemento" },
-    { "id": "leer_linea", "etiqueta": "leer línea" }
+    { "id": "leer_linea", "etiqueta": "leer línea" },
+    { "id": "calcular", "etiqueta": "resultado" }
   ]
 }

@@ -15,6 +15,7 @@
     { "id": "deshacer", "teclas": "Ctrl+Z" },
     { "id": "rehacer", "teclas": "Ctrl+Y" },
     { "id": "leer_elemento", "teclas": "Ctrl+L" },
-    { "id": "leer_linea", "teclas": "Ctrl+Shift+L" }
+    { "id": "leer_linea", "teclas": "Ctrl+Shift+L" },
+    { "id": "calcular", "teclas": "Ctrl+Return" }
   ]
 }
