@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>DISVIMAT — Editor científico accesible</title>
+<link rel="stylesheet" href="/static/editor.css"/>
+</head>
+<body>
+<a class="salto" href="#editor">Saltar al editor</a>
+<header>
+  <h1>DISVIMAT — Editor científico accesible</h1>
+</header>
+<main>
+  <section aria-labelledby="titulo-editor">
+    <h2 id="titulo-editor" class="oculto-visual">Editor</h2>
+
+    <div id="editor" role="application" tabindex="0"
+         aria-label="Editor de expresiones matemáticas"
+         aria-describedby="ayuda-breve">
+      <div id="math" class="math"></div>
+      <p id="linea" class="linea" aria-hidden="true"></p>
+    </div>
+    <p id="ayuda-breve" class="oculto-visual">
+      Escriba números y operadores. Control F fracción, Control R raíz,
+      Control P potencia, Tabulador siguiente hueco, flechas para navegar,
+      Control Intro calcular, Control Mayúsculas L leer la línea.
+    </p>
+
+    <!-- Barra de estado visible (no es región viva para no duplicar la voz). -->
+    <p id="estado" class="estado"></p>
+  </section>
+
+  <section aria-labelledby="titulo-acciones" class="acciones">
+    <h2 id="titulo-acciones" class="oculto-visual">Acciones</h2>
+    <button type="button" id="btn-calcular">Calcular</button>
+    <button type="button" id="btn-exportar-xhtml">Exportar XHTML</button>
+    <button type="button" id="btn-exportar-bra">Exportar braille (BRA)</button>
+    <label class="importar">
+      Importar XHTML
+      <input type="file" id="archivo" accept=".xhtml,.html,.xml"/>
+    </label>
+  </section>
+
+  <section aria-labelledby="titulo-ayuda" class="ayuda">
+    <h2 id="titulo-ayuda">Teclas</h2>
+    <dl>
+      <dt>Números y letras, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>=</kbd></dt>
+      <dd>Insertan el signo correspondiente.</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>Fracción.</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>R</kbd> / <kbd>Ctrl</kbd>+<kbd>P</kbd></dt>
+      <dd>Raíz cuadrada / potencia.</dd>
+      <dt><kbd>Tab</kbd></dt><dd>Siguiente hueco de la estructura.</dd>
+      <dt>Flechas, <kbd>Inicio</kbd>, <kbd>Fin</kbd></dt><dd>Navegación.</dd>
+      <dt><kbd>Supr</kbd> / <kbd>Retroceso</kbd></dt><dd>Borrar.</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt><dd>Deshacer / rehacer.</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>Intro</kbd></dt><dd>Calcular el resultado.</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></dt><dd>Leer la línea completa.</dd>
+    </dl>
+  </section>
+</main>
+
+<!-- Única región viva: anuncia cada acción a la síntesis de voz. -->
+<div id="anuncio" class="oculto-visual" aria-live="assertive" aria-atomic="true"></div>
+
+<script src="/static/editor.js"></script>
+</body>
+</html>

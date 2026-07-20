@@ -108,9 +108,24 @@ class EntradaBrailleTexto(Registro):
 
 
 class EntradaPerfil(Registro):
-    """A7: perfil de usuario; limita los elementos disponibles por nivel."""
+    """A7: perfil de usuario; limita los elementos disponibles por nivel.
+
+    ``calculadora`` implementa el bloqueo del profesor (A9): en falso, el
+    perfil no puede usar la calculadora.
+    """
 
     nivel: int = Field(ge=1)
+    calculadora: bool = True
+
+
+class EntradaMensaje(Registro):
+    """Mensajes del programa para el usuario, localizables por lengua.
+
+    Los produce el núcleo identificados por id (p. ej. los errores de la
+    calculadora); el texto vive aquí, nunca en el código.
+    """
+
+    texto: str
 
 
 class Tabla[E: Registro](BaseModel):

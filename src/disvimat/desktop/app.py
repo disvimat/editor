@@ -29,6 +29,8 @@ _ESPECIALES = {
     wx.WXK_TAB: "Tab",
     wx.WXK_DELETE: "Delete",
     wx.WXK_BACK: "Backspace",
+    wx.WXK_RETURN: "Return",
+    wx.WXK_NUMPAD_ENTER: "Return",
     wx.WXK_NUMPAD_ADD: "NumAdd",
     wx.WXK_NUMPAD_SUBTRACT: "NumSubtract",
     wx.WXK_NUMPAD_MULTIPLY: "NumMultiply",

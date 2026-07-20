@@ -5,6 +5,7 @@
   "entradas": [
     { "id": "inicial", "nivel": 1 },
     { "id": "medio", "nivel": 2 },
-    { "id": "avanzado", "nivel": 3 }
+    { "id": "avanzado", "nivel": 3 },
+    { "id": "examen", "nivel": 3, "calculadora": false }
   ]
 }

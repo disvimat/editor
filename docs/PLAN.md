@@ -181,8 +181,15 @@ Definir `elementos.json` inicial (subconjunto: aritmética y álgebra elemental)
 **Fase 2 — Braille e importación.**
 Transcripción br6 con liblouis (B5) + ventana BR6 (B6) + exportación .BRA (C3); add-on NVDA y tabla br8 (B3); importación XHTML (D1); perfiles de usuario (A7); numpad (A4).
 
-**Fase 3 — Web + cálculo.**
-Adaptador FastAPI reutilizando el núcleo completo; editor web accesible; calculadora por niveles (A8) y bloqueo del profesor (A9); PDF (C2), MP3 (C4); estructuras bidimensionales (A10/B7); ayuda (A6).
+**Fase 3 — Web + cálculo.** *(hecha)*
+Adaptador FastAPI reutilizando el núcleo completo; editor web accesible
+(HTML semántico, MathML nativo, región `aria-live` única, teclas
+canónicas en JS con cola de envíos); calculadora con aritmética exacta
+de fracciones (A8) y bloqueo del profesor por perfil (A9), con mensajes
+localizables (`mensajes.<lengua>.json`).
+*Traslado a Fase 4:* PDF (C2), MP3 (C4), estructuras bidimensionales
+(A10/B7) y ayuda (A6), para no mezclar interfaz web y generación de
+formatos en una sola fase.
 
 **Fase 4 — Química y extensibilidad.**
 Módulos F (las tablas ya soportan categoría química); LaTeX (D2); API de scripts (A5); colecciones de fórmulas (E3); algoritmos 2D (A11/B8).
