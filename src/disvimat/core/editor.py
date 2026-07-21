@@ -1,249 +1,249 @@
-"""Controlador del editor lineal: une teclado, documento y presentaciones.
+"""Editor controller: ties keyboard, document and presentations together.
 
-Las interfaces (escritorio y web) son deliberadamente delgadas: envían
-pulsaciones canónicas o caracteres y reflejan el :class:`Resultado`
-(texto lineal, posición del caret y verbalización). Toda la lógica de
-comportamiento vive aquí y en las tablas de ``data/``.
+The interfaces (desktop and web) are deliberately thin: they send
+canonical key strokes or characters and reflect the :class:`Result`
+(linear text, caret position and speech). All behaviour lives here and
+in the ``data/`` tables.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from disvimat.core.calculadora import Calculadora, ErrorDeCalculo
-from disvimat.core.documento import Caracter, Documento, Estructura, Nodo, Signo
-from disvimat.core.elementos import ID_HUECO, TipoElemento
-from disvimat.core.presentacion import Presentador
-from disvimat.core.tablas import (
-    Catalogo,
-    EntradaEtiqueta,
-    EntradaGlifo,
-    EntradaMensaje,
-    EntradaPerfil,
-    EntradaTecla,
-    Tabla,
-    cargar_tabla,
-    dir_datos,
-    ruta_tabla_lengua,
+from disvimat.core.calculator import CalculationError, Calculator
+from disvimat.core.document import Character, Document, Node, Sign, Structure
+from disvimat.core.elements import SLOT_ID, ElementType
+from disvimat.core.keyboard import Keyboard
+from disvimat.core.presentation import Presenter
+from disvimat.core.speech import Speaker
+from disvimat.core.tables import (
+    Catalog,
+    GlyphEntry,
+    KeyEntry,
+    LabelEntry,
+    MessageEntry,
+    ProfileEntry,
+    Table,
+    data_dir,
+    language_table_path,
+    load_table,
 )
-from disvimat.core.teclado import Teclado
-from disvimat.core.verbalizacion import Verbalizador
 
-#: Id de mensaje del bloqueo del profesor (A9); vive en la tabla mensajes.
-MSG_CALCULADORA_BLOQUEADA = "calculadora_bloqueada"
+#: Message id of the teacher's lock (A9); it lives in the messages table.
+MSG_CALCULATOR_LOCKED = "calculator_locked"
 
 
 @dataclass(frozen=True)
-class Resultado:
-    """Lo que la interfaz debe reflejar tras cada acción."""
+class Result:
+    """What the interface must reflect after each action."""
 
-    texto: str
-    posicion: int
-    verbalizacion: str
+    text: str
+    position: int
+    speech: str
 
 
 class Editor:
-    """Editor lineal DisvimatEditor sobre un documento en memoria."""
+    """The DisvimatEditor linear editor over an in-memory document."""
 
     def __init__(
         self,
-        catalogo: Catalogo,
-        teclado: Teclado,
-        presentador: Presentador,
-        verbalizador: Verbalizador,
-        calculadora: Calculadora,
-        mensajes: dict[str, str],
+        catalog: Catalog,
+        keyboard: Keyboard,
+        presenter: Presenter,
+        speaker: Speaker,
+        calculator: Calculator,
+        messages: dict[str, str],
         *,
-        calculadora_permitida: bool = True,
+        calculator_allowed: bool = True,
     ) -> None:
-        self.catalogo = catalogo
-        self.documento = Documento()
-        self._teclado = teclado
-        self._presentador = presentador
-        self._verbalizador = verbalizador
-        self._calculadora = calculadora
-        self._mensajes = mensajes
-        self._calculadora_permitida = calculadora_permitida
-        self._comandos: dict[str, Callable[[], str]] = {
-            "izquierda": self._cmd_izquierda,
-            "derecha": self._cmd_derecha,
-            "inicio_linea": self._cmd_inicio_linea,
-            "fin_linea": self._cmd_fin_linea,
-            "entrar_estructura": self._cmd_entrar,
-            "salir_estructura": self._cmd_salir,
-            "siguiente_hueco": self._cmd_hueco_siguiente,
-            "borrar": self._cmd_borrar,
-            "borrar_atras": self._cmd_borrar_atras,
-            "deshacer": self._cmd_deshacer,
-            "rehacer": self._cmd_rehacer,
-            "leer_elemento": self._leer_actual,
-            "leer_linea": self._cmd_leer_linea,
-            "calcular": self._cmd_calcular,
+        self.catalog = catalog
+        self.document = Document()
+        self._keyboard = keyboard
+        self._presenter = presenter
+        self._speaker = speaker
+        self._calculator = calculator
+        self._messages = messages
+        self._calculator_allowed = calculator_allowed
+        self._commands: dict[str, Callable[[], str]] = {
+            "left": self._cmd_left,
+            "right": self._cmd_right,
+            "line_start": self._cmd_line_start,
+            "line_end": self._cmd_line_end,
+            "enter_structure": self._cmd_enter,
+            "exit_structure": self._cmd_exit,
+            "next_slot": self._cmd_next_slot,
+            "delete": self._cmd_delete,
+            "backspace": self._cmd_backspace,
+            "undo": self._cmd_undo,
+            "redo": self._cmd_redo,
+            "read_element": self._read_current,
+            "read_line": self._cmd_read_line,
+            "calculate": self._cmd_calculate,
         }
 
-    # --- API para las interfaces -------------------------------------------
+    # --- API for the interfaces ---------------------------------------------
 
-    def pulsar(self, teclas: str) -> Resultado | None:
-        """Ejecuta la pulsación según las tablas; None si no está asignada."""
-        elemento = self._teclado.resolver(teclas)
-        if elemento is None:
+    def press(self, keys: str) -> Result | None:
+        """Run the key stroke from the tables; None when it is unassigned."""
+        element = self._keyboard.resolve(keys)
+        if element is None:
             return None
-        if elemento.tipo is TipoElemento.COMANDO:
-            comando = self._comandos.get(elemento.id)
-            if comando is None:
+        if element.type is ElementType.COMMAND:
+            command = self._commands.get(element.id)
+            if command is None:
                 return None
-            return self._resultado(comando())
-        if elemento.tipo is TipoElemento.ESTRUCTURA:
-            self.documento.insertar(Estructura(elemento.id, [[] for _ in range(elemento.aridad)]))
-            etiqueta = self._verbalizador.etiqueta(elemento.id)
-            return self._resultado(f"{etiqueta}, {self._verbalizador.etiqueta(ID_HUECO)} 1")
-        self.documento.insertar(Signo(elemento.id))
-        return self._resultado(self._verbalizador.etiqueta(elemento.id))
+            return self._result(command())
+        if element.type is ElementType.STRUCTURE:
+            self.document.insert(Structure(element.id, [[] for _ in range(element.arity)]))
+            label = self._speaker.label(element.id)
+            return self._result(f"{label}, {self._speaker.label(SLOT_ID)} 1")
+        self.document.insert(Sign(element.id))
+        return self._result(self._speaker.label(element.id))
 
-    def escribir(self, caracter: str) -> Resultado:
-        """Inserta un carácter de texto plano (dígitos, letras, espacio)."""
-        self.documento.insertar(Caracter(caracter))
-        return self._resultado(caracter)
+    def type_character(self, character: str) -> Result:
+        """Insert a plain text character (digit, letter, space)."""
+        self.document.insert(Character(character))
+        return self._result(character)
 
-    def estado(self) -> Resultado:
-        """El estado actual sin ejecutar ninguna acción (lectura de línea)."""
-        return self._resultado(self._cmd_leer_linea())
+    def state(self) -> Result:
+        """The current state without running any action (line reading)."""
+        return self._result(self._cmd_read_line())
 
-    def cargar(self, nodos: list[Nodo]) -> Resultado:
-        """Sustituye el contenido del documento (importaciones D); deshacible."""
-        self.documento.cargar(nodos)
-        return self._resultado(self._cmd_leer_linea())
+    def load(self, nodes: list[Node]) -> Result:
+        """Replace the document content (D imports); undoable."""
+        self.document.load(nodes)
+        return self._result(self._cmd_read_line())
 
-    # --- comandos ------------------------------------------------------------
+    # --- commands ------------------------------------------------------------
 
-    def _cmd_izquierda(self) -> str:
-        nodo = self.documento.izquierda()
-        if nodo is None:
-            return self._verbalizador.etiqueta("inicio_linea")
-        return self._verbalizador.nodo(nodo)
+    def _cmd_left(self) -> str:
+        node = self.document.left()
+        if node is None:
+            return self._speaker.label("line_start")
+        return self._speaker.node(node)
 
-    def _cmd_derecha(self) -> str:
-        nodo = self.documento.derecha()
-        if nodo is None:
-            return self._verbalizador.etiqueta("fin_linea")
-        return self._verbalizador.nodo(nodo)
+    def _cmd_right(self) -> str:
+        node = self.document.right()
+        if node is None:
+            return self._speaker.label("line_end")
+        return self._speaker.node(node)
 
-    def _cmd_inicio_linea(self) -> str:
-        self.documento.inicio()
-        return self._verbalizador.etiqueta("inicio_linea")
+    def _cmd_line_start(self) -> str:
+        self.document.to_line_start()
+        return self._speaker.label("line_start")
 
-    def _cmd_fin_linea(self) -> str:
-        self.documento.fin()
-        return self._verbalizador.etiqueta("fin_linea")
+    def _cmd_line_end(self) -> str:
+        self.document.to_line_end()
+        return self._speaker.label("line_end")
 
-    def _cmd_entrar(self) -> str:
-        estructura = self.documento.entrar()
-        if estructura is None:
-            return self._leer_actual()
-        etiqueta = self._verbalizador.etiqueta("entrar_estructura")
-        return f"{etiqueta}: {self._verbalizador.etiqueta(estructura.id_elemento)}"
+    def _cmd_enter(self) -> str:
+        structure = self.document.enter()
+        if structure is None:
+            return self._read_current()
+        label = self._speaker.label("enter_structure")
+        return f"{label}: {self._speaker.label(structure.element_id)}"
 
-    def _cmd_salir(self) -> str:
-        estructura = self.documento.salir()
-        if estructura is None:
-            return self._leer_actual()
-        etiqueta = self._verbalizador.etiqueta("salir_estructura")
-        return f"{etiqueta}: {self._verbalizador.etiqueta(estructura.id_elemento)}"
+    def _cmd_exit(self) -> str:
+        structure = self.document.exit()
+        if structure is None:
+            return self._read_current()
+        label = self._speaker.label("exit_structure")
+        return f"{label}: {self._speaker.label(structure.element_id)}"
 
-    def _cmd_hueco_siguiente(self) -> str:
-        estructura = self.documento.estructura_actual()
-        if estructura is None:
-            return self._leer_actual()
-        numero_hueco = self.documento.hueco_siguiente()
-        if numero_hueco is None:
-            etiqueta = self._verbalizador.etiqueta("salir_estructura")
-            return f"{etiqueta}: {self._verbalizador.etiqueta(estructura.id_elemento)}"
-        return f"{self._verbalizador.etiqueta(ID_HUECO)} {numero_hueco + 1}"
+    def _cmd_next_slot(self) -> str:
+        structure = self.document.current_structure()
+        if structure is None:
+            return self._read_current()
+        slot_number = self.document.next_slot()
+        if slot_number is None:
+            label = self._speaker.label("exit_structure")
+            return f"{label}: {self._speaker.label(structure.element_id)}"
+        return f"{self._speaker.label(SLOT_ID)} {slot_number + 1}"
 
-    def _cmd_borrar(self) -> str:
-        nodo = self.documento.borrar()
-        if nodo is None:
-            return self._leer_actual()
-        return f"{self._verbalizador.etiqueta('borrar')}: {self._verbalizador.nodo(nodo)}"
+    def _cmd_delete(self) -> str:
+        node = self.document.delete()
+        if node is None:
+            return self._read_current()
+        return f"{self._speaker.label('delete')}: {self._speaker.node(node)}"
 
-    def _cmd_borrar_atras(self) -> str:
-        nodo = self.documento.borrar_atras()
-        if nodo is None:
-            return self._verbalizador.etiqueta("inicio_linea")
-        return f"{self._verbalizador.etiqueta('borrar_atras')}: {self._verbalizador.nodo(nodo)}"
+    def _cmd_backspace(self) -> str:
+        node = self.document.backspace()
+        if node is None:
+            return self._speaker.label("line_start")
+        return f"{self._speaker.label('backspace')}: {self._speaker.node(node)}"
 
-    def _cmd_deshacer(self) -> str:
-        self.documento.deshacer()
-        return f"{self._verbalizador.etiqueta('deshacer')}: {self._cmd_leer_linea()}"
+    def _cmd_undo(self) -> str:
+        self.document.undo()
+        return f"{self._speaker.label('undo')}: {self._cmd_read_line()}"
 
-    def _cmd_rehacer(self) -> str:
-        self.documento.rehacer()
-        return f"{self._verbalizador.etiqueta('rehacer')}: {self._cmd_leer_linea()}"
+    def _cmd_redo(self) -> str:
+        self.document.redo()
+        return f"{self._speaker.label('redo')}: {self._cmd_read_line()}"
 
-    def _cmd_calcular(self) -> str:
-        """Calcula la expresión (A8), respetando el bloqueo del profesor (A9)."""
-        if not self._calculadora_permitida:
-            return self._mensaje(MSG_CALCULADORA_BLOQUEADA)
+    def _cmd_calculate(self) -> str:
+        """Compute the expression (A8), honouring the teacher's lock (A9)."""
+        if not self._calculator_allowed:
+            return self._message(MSG_CALCULATOR_LOCKED)
         try:
-            valor = self._calculadora.evaluar(self.documento.raiz)
-        except ErrorDeCalculo as error:
-            return self._mensaje(error.id_mensaje)
-        return f"{self._verbalizador.etiqueta('calcular')}: {valor}"
+            value = self._calculator.evaluate(self.document.root)
+        except CalculationError as error:
+            return self._message(error.message_id)
+        return f"{self._speaker.label('calculate')}: {value}"
 
-    def _cmd_leer_linea(self) -> str:
-        return self._verbalizador.secuencia(self.documento.raiz)
+    def _cmd_read_line(self) -> str:
+        return self._speaker.sequence(self.document.root)
 
-    def _mensaje(self, id_mensaje: str) -> str:
-        return self._mensajes.get(id_mensaje, id_mensaje)
+    def _read_current(self) -> str:
+        node = self.document.node_right()
+        if node is None:
+            return self._speaker.label("line_end")
+        return self._speaker.node(node)
 
-    def _leer_actual(self) -> str:
-        nodo = self.documento.nodo_derecha()
-        if nodo is None:
-            return self._verbalizador.etiqueta("fin_linea")
-        return self._verbalizador.nodo(nodo)
+    def _message(self, message_id: str) -> str:
+        return self._messages.get(message_id, message_id)
 
-    def _resultado(self, verbalizacion: str) -> Resultado:
-        texto, posicion = self._presentador.render(self.documento)
-        return Resultado(texto=texto, posicion=posicion, verbalizacion=verbalizacion)
+    def _result(self, speech: str) -> Result:
+        text, position = self._presenter.render(self.document)
+        return Result(text=text, position=position, speech=speech)
 
 
-def crear_editor(
-    directorio: Path | None = None, lengua: str = "es", perfil: str | None = None
+def create_editor(
+    directory: Path | None = None, language: str = "en", profile: str | None = None
 ) -> Editor:
-    """Construye un editor cargando todas las tablas del directorio de datos.
+    """Build an editor loading every table from the data directory.
 
-    ``lengua`` resuelve las tablas dependientes de la lengua (con reserva
-    al español, E6); ``perfil`` limita los elementos por nivel (A7).
+    ``language`` resolves the language-dependent tables (falling back to
+    the reference language, E6); ``profile`` limits elements by level (A7).
     """
-    directorio = directorio or dir_datos()
-    catalogo = Catalogo.cargar(directorio / "elementos.json")
-    nivel: int | None = None
-    calculadora_permitida = True
-    if perfil is not None:
-        perfiles: Tabla[EntradaPerfil] = cargar_tabla(directorio / "perfiles.json", EntradaPerfil)
-        por_id = {entrada.id: entrada for entrada in perfiles.entradas}
-        if perfil not in por_id:
-            raise ValueError(f"perfil desconocido: {perfil!r}")
-        nivel = por_id[perfil].nivel
-        calculadora_permitida = por_id[perfil].calculadora
-    tablas_de_teclas: list[Tabla[EntradaTecla]] = [
-        cargar_tabla(directorio / nombre, EntradaTecla)
-        for nombre in ("teclas_signos.json", "teclas_comandos.json", "teclas_numpad.json")
+    directory = directory or data_dir()
+    catalog = Catalog.load(directory / "elements.json")
+    level: int | None = None
+    calculator_allowed = True
+    if profile is not None:
+        profiles: Table[ProfileEntry] = load_table(directory / "profiles.json", ProfileEntry)
+        by_id = {entry.id: entry for entry in profiles.entries}
+        if profile not in by_id:
+            raise ValueError(f"unknown profile: {profile!r}")
+        level = by_id[profile].level
+        calculator_allowed = by_id[profile].calculator
+    key_tables: list[Table[KeyEntry]] = [
+        load_table(directory / name, KeyEntry)
+        for name in ("keys_signs.json", "keys_commands.json", "keys_numpad.json")
     ]
-    glifos: Tabla[EntradaGlifo] = cargar_tabla(directorio / "glifos.json", EntradaGlifo)
-    etiquetas: Tabla[EntradaEtiqueta] = cargar_tabla(
-        ruta_tabla_lengua(directorio, "etiquetas", lengua), EntradaEtiqueta
+    glyphs: Table[GlyphEntry] = load_table(directory / "glyphs.json", GlyphEntry)
+    labels: Table[LabelEntry] = load_table(
+        language_table_path(directory, "labels", language), LabelEntry
     )
-    mensajes_tabla: Tabla[EntradaMensaje] = cargar_tabla(
-        ruta_tabla_lengua(directorio, "mensajes", lengua), EntradaMensaje
+    messages_table: Table[MessageEntry] = load_table(
+        language_table_path(directory, "messages", language), MessageEntry
     )
-    mensajes = {entrada.id: entrada.texto for entrada in mensajes_tabla.entradas}
+    messages = {entry.id: entry.text for entry in messages_table.entries}
     return Editor(
-        catalogo,
-        Teclado(catalogo, *tablas_de_teclas, nivel=nivel),
-        Presentador(glifos),
-        Verbalizador(etiquetas),
-        Calculadora(),
-        mensajes,
-        calculadora_permitida=calculadora_permitida,
+        catalog,
+        Keyboard(catalog, *key_tables, level=level),
+        Presenter(glyphs),
+        Speaker(labels),
+        Calculator(),
+        messages,
+        calculator_allowed=calculator_allowed,
     )

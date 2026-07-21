@@ -1,1 +1,1 @@
-"""Adaptador de escritorio (wxPython): controles nativos legibles por NVDA."""
+"""Desktop adapter (wxPython): native controls that NVDA can read."""

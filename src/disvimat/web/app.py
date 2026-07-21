@@ -1,13 +1,14 @@
-"""Aplicación web FastAPI del editor DISVIMAT.
+"""DISVIMAT web application (FastAPI).
 
-Mantiene una sesión de edición por usuario (un :class:`Editor` del
-núcleo en memoria) y expone la misma operativa que la versión de
-escritorio: pulsar teclas, escribir caracteres, importar y exportar.
-La presentación visual es MathML nativo, que los navegadores modernos
-verbalizan; además, cada respuesta incluye la verbalización del núcleo
-para anunciarla en una región ``aria-live``.
+Keeps one editing session per user (a core :class:`Editor` in memory) and
+exposes the same operations as the desktop version: pressing keys,
+typing characters, importing and exporting. The visual presentation is
+native MathML, which modern browsers speak; on top of that every answer
+carries the core speech string, announced in an ``aria-live`` region.
 """
 
+import os
+import re
 import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -17,128 +18,160 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from disvimat.core.editor import Editor, Resultado, crear_editor
-from disvimat.core.filtros.mathml import ErrorDeFiltro, FiltroMathML
-from disvimat.core.transcripcion.braille import Transcriptor, crear_transcriptor
-from disvimat.export.xhtml import ExportadorXHTML
+from disvimat.core.editor import Editor, Result, create_editor
+from disvimat.core.filters.mathml import FilterError, MathMLFilter
+from disvimat.core.transcription.braille import (
+    BrailleTablesMissing,
+    BrailleTranscriber,
+    create_transcriber,
+)
+from disvimat.core.ui_text import UIText
+from disvimat.export.xhtml import XHTMLExporter
 
-_ESTATICOS = Path(__file__).resolve().parent / "static"
+_STATIC = Path(__file__).resolve().parent / "static"
+_PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 
 
-class Vista(BaseModel):
-    """Lo que la página necesita para reflejar el estado del editor."""
+class View(BaseModel):
+    """What the page needs in order to reflect the editor state."""
 
-    sesion: str
-    texto: str
-    posicion: int
-    verbalizacion: str
+    session: str
+    text: str
+    position: int
+    speech: str
     mathml: str
 
 
-class PeticionTecla(BaseModel):
-    """Una tecla de la página: combinación canónica y/o carácter imprimible."""
+class KeyRequest(BaseModel):
+    """A key from the page: canonical stroke and/or printable character."""
 
-    teclas: str | None = None
-    caracter: str | None = None
+    keys: str | None = None
+    character: str | None = None
 
 
-class PeticionImportar(BaseModel):
+class ImportRequest(BaseModel):
     xhtml: str
 
 
-class _Sesion:
-    """Editor y utilidades de exportación de una sesión de usuario."""
+class _Session:
+    """Editor and export helpers of one user session."""
 
-    def __init__(self, lengua: str, perfil: str | None) -> None:
-        self.editor: Editor = crear_editor(lengua=lengua, perfil=perfil)
-        self.transcriptor: Transcriptor = crear_transcriptor(lengua=lengua)
-        self.exportador = ExportadorXHTML(self.editor.catalogo)
+    def __init__(self, language: str, profile: str | None) -> None:
+        self.language = language
+        self.editor: Editor = create_editor(language=language, profile=profile)
+        self.exporter = XHTMLExporter(self.editor.catalog)
+        try:
+            self.transcriber: BrailleTranscriber | None = create_transcriber(language=language)
+        except BrailleTablesMissing:
+            # No braille tables for this language: braille stays unavailable
+            # rather than silently serving another language's braille.
+            self.transcriber = None
 
     def mathml(self) -> str:
-        elemento = self.exportador.mathml(self.editor.documento.raiz)
-        return ET.tostring(elemento, encoding="unicode")
+        element = self.exporter.mathml(self.editor.document.root)
+        return ET.tostring(element, encoding="unicode")
 
 
-def crear_app() -> FastAPI:
-    """Construye la aplicación; las sesiones viven mientras corre el proceso."""
+def render_page(language: str) -> str:
+    """The page with its ``{{placeholders}}`` replaced by the ui table."""
+    text = UIText.load(language=language)
+    template = (_STATIC / "index.html").read_text(encoding="utf-8")
+
+    def replace(match: re.Match[str]) -> str:
+        name = match.group(1)
+        return language if name == "language" else text(name)
+
+    return _PLACEHOLDER.sub(replace, template)
+
+
+def create_app() -> FastAPI:
+    """Build the application; sessions live as long as the process."""
     app = FastAPI(title="DISVIMAT web")
-    sesiones: dict[str, _Sesion] = {}
+    sessions: dict[str, _Session] = {}
+    default_language = os.environ.get("DISVIMAT_LANG", "en")
 
-    def obtener(sesion_id: str) -> _Sesion:
-        sesion = sesiones.get(sesion_id)
-        if sesion is None:
-            raise HTTPException(status_code=404, detail="sesión desconocida")
-        return sesion
+    def get_session(session_id: str) -> _Session:
+        session = sessions.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="unknown session")
+        return session
 
-    def vista(sesion_id: str, sesion: _Sesion, resultado: Resultado) -> Vista:
-        return Vista(
-            sesion=sesion_id,
-            texto=resultado.texto,
-            posicion=resultado.posicion,
-            verbalizacion=resultado.verbalizacion,
-            mathml=sesion.mathml(),
+    def view(session_id: str, session: _Session, result: Result) -> View:
+        return View(
+            session=session_id,
+            text=result.text,
+            position=result.position,
+            speech=result.speech,
+            mathml=session.mathml(),
         )
 
     @app.get("/", response_class=HTMLResponse)
-    def indice() -> str:
-        return (_ESTATICOS / "index.html").read_text(encoding="utf-8")
+    def index(language: str | None = None) -> str:
+        return render_page(language or default_language)
 
-    @app.post("/api/sesion", response_model=Vista)
-    def nueva_sesion(lengua: str = "es", perfil: str | None = None) -> Vista:
-        sesion_id = uuid.uuid4().hex
-        sesion = _Sesion(lengua=lengua, perfil=perfil)
-        sesiones[sesion_id] = sesion
-        return vista(sesion_id, sesion, sesion.editor.estado())
+    @app.post("/api/session", response_model=View)
+    def new_session(language: str | None = None, profile: str | None = None) -> View:
+        session_id = uuid.uuid4().hex
+        session = _Session(language=language or default_language, profile=profile)
+        sessions[session_id] = session
+        return view(session_id, session, session.editor.state())
 
-    @app.post("/api/sesion/{sesion_id}/tecla", response_model=Vista)
-    def tecla(sesion_id: str, peticion: PeticionTecla) -> Vista:
-        sesion = obtener(sesion_id)
-        resultado: Resultado | None = None
-        if peticion.teclas:
-            resultado = sesion.editor.pulsar(peticion.teclas)
-        if resultado is None and peticion.caracter:
-            resultado = sesion.editor.escribir(peticion.caracter)
-        if resultado is None:
-            resultado = sesion.editor.estado()
-        return vista(sesion_id, sesion, resultado)
+    @app.post("/api/session/{session_id}/key", response_model=View)
+    def key(session_id: str, request: KeyRequest) -> View:
+        session = get_session(session_id)
+        result: Result | None = None
+        if request.keys:
+            result = session.editor.press(request.keys)
+        if result is None and request.character:
+            result = session.editor.type_character(request.character)
+        if result is None:
+            result = session.editor.state()
+        return view(session_id, session, result)
 
-    @app.post("/api/sesion/{sesion_id}/importar", response_model=Vista)
-    def importar(sesion_id: str, peticion: PeticionImportar) -> Vista:
-        sesion = obtener(sesion_id)
+    @app.post("/api/session/{session_id}/import", response_model=View)
+    def import_xhtml(session_id: str, request: ImportRequest) -> View:
+        session = get_session(session_id)
         try:
-            nodos = FiltroMathML(sesion.editor.catalogo).desde_xhtml(peticion.xhtml)
-        except ErrorDeFiltro as error:
+            nodes = MathMLFilter(session.editor.catalog).from_xhtml(request.xhtml)
+        except FilterError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
-        return vista(sesion_id, sesion, sesion.editor.cargar(nodos))
+        return view(session_id, session, session.editor.load(nodes))
 
-    def _descarga(contenido: str, nombre: str, tipo: str) -> PlainTextResponse:
+    def _download(content: str, name: str, media_type: str) -> PlainTextResponse:
         return PlainTextResponse(
-            contenido,
-            media_type=tipo,
-            headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+            content,
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{name}"'},
         )
 
-    @app.get("/api/sesion/{sesion_id}/exportar.xhtml")
-    def exportar_xhtml(sesion_id: str) -> PlainTextResponse:
-        sesion = obtener(sesion_id)
-        contenido = sesion.exportador.documento_xhtml(sesion.editor.documento.raiz)
-        return _descarga(contenido, "documento.xhtml", "application/xhtml+xml")
+    @app.get("/api/session/{session_id}/export.xhtml")
+    def export_xhtml(session_id: str) -> PlainTextResponse:
+        session = get_session(session_id)
+        content = session.exporter.xhtml_document(
+            session.editor.document.root, language=session.language
+        )
+        return _download(content, "document.xhtml", "application/xhtml+xml")
 
-    @app.get("/api/sesion/{sesion_id}/exportar.bra")
-    def exportar_bra(sesion_id: str) -> PlainTextResponse:
-        sesion = obtener(sesion_id)
-        contenido = sesion.transcriptor.ascii(sesion.editor.documento.raiz) + "\n"
-        return _descarga(contenido, "documento.bra", "text/plain")
+    @app.get("/api/session/{session_id}/export.bra")
+    def export_bra(session_id: str) -> PlainTextResponse:
+        session = get_session(session_id)
+        if session.transcriber is None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"no braille tables for language {session.language!r}",
+            )
+        content = session.transcriber.ascii(session.editor.document.root) + "\n"
+        return _download(content, "document.bra", "text/plain")
 
     @app.get("/favicon.ico")
     def favicon() -> FileResponse:
-        return FileResponse(_ESTATICOS / "favicon.svg", media_type="image/svg+xml")
+        return FileResponse(_STATIC / "favicon.svg", media_type="image/svg+xml")
 
-    app.mount("/static", StaticFiles(directory=_ESTATICOS), name="static")
+    app.mount("/static", StaticFiles(directory=_STATIC), name="static")
     return app
 
 
-app = crear_app()
+app = create_app()
 
 
 def main() -> None:

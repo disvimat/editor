@@ -1,0 +1,62 @@
+{
+  "table": "labels",
+  "version": 1,
+  "language": "es",
+  "entries": [
+    { "id": "plus", "label": "más" },
+    { "id": "minus", "label": "menos" },
+    { "id": "times", "label": "por" },
+    { "id": "divide", "label": "entre" },
+    { "id": "equals", "label": "igual a" },
+    { "id": "not_equal", "label": "distinto de" },
+    { "id": "less_than", "label": "menor que" },
+    { "id": "greater_than", "label": "mayor que" },
+    { "id": "less_equal", "label": "menor o igual que" },
+    { "id": "greater_equal", "label": "mayor o igual que" },
+    { "id": "plus_minus", "label": "más menos" },
+    { "id": "percent", "label": "por ciento" },
+    { "id": "decimal_point", "label": "coma" },
+    {
+      "id": "fraction",
+      "label": "fracción",
+      "parts": { "start": "fracción", "separator": "entre", "end": "fin de fracción" }
+    },
+    {
+      "id": "power",
+      "label": "potencia",
+      "parts": { "separator": "elevado a", "end": "fin de exponente" }
+    },
+    {
+      "id": "subscript",
+      "label": "subíndice",
+      "parts": { "separator": "subíndice", "end": "fin de subíndice" }
+    },
+    {
+      "id": "sqrt",
+      "label": "raíz cuadrada",
+      "parts": { "start": "raíz cuadrada de", "end": "fin de raíz" }
+    },
+    {
+      "id": "nth_root",
+      "label": "raíz",
+      "parts": { "start": "raíz", "separator": "de índice", "end": "fin de raíz" }
+    },
+    { "id": "slot", "label": "hueco" },
+    { "id": "number_prefix", "label": "número" },
+    { "id": "capital", "label": "mayúscula" },
+    { "id": "left", "label": "izquierda" },
+    { "id": "right", "label": "derecha" },
+    { "id": "line_start", "label": "inicio de línea" },
+    { "id": "line_end", "label": "fin de línea" },
+    { "id": "enter_structure", "label": "entrar en la estructura" },
+    { "id": "exit_structure", "label": "salir de la estructura" },
+    { "id": "next_slot", "label": "siguiente hueco" },
+    { "id": "delete", "label": "borrar" },
+    { "id": "backspace", "label": "borrar hacia atrás" },
+    { "id": "undo", "label": "deshacer" },
+    { "id": "redo", "label": "rehacer" },
+    { "id": "read_element", "label": "leer elemento" },
+    { "id": "read_line", "label": "leer línea" },
+    { "id": "calculate", "label": "resultado" }
+  ]
+}

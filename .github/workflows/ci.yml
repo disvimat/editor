@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  pruebas:
+  checks:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -16,13 +16,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Instalar dependencias
-        run: pip install -e .[dev]
+      # The desktop extra (wxPython) is left out on purpose: it needs GTK
+      # build dependencies and the core plus the web adapter are enough to
+      # run every automated test.
+      - name: Install dependencies
+        run: pip install -e ".[web,dev]"
       - name: Lint (ruff)
         run: |
           ruff check .
           ruff format --check .
-      - name: Tipos (mypy)
+      - name: Types (mypy)
         run: mypy
       - name: Tests (pytest)
         run: pytest

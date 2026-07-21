@@ -1,0 +1,21 @@
+{
+  "table": "keys_commands",
+  "version": 1,
+  "language": null,
+  "entries": [
+    { "id": "left", "keys": "Left" },
+    { "id": "right", "keys": "Right" },
+    { "id": "line_start", "keys": "Home" },
+    { "id": "line_end", "keys": "End" },
+    { "id": "enter_structure", "keys": "Down" },
+    { "id": "exit_structure", "keys": "Up" },
+    { "id": "next_slot", "keys": "Tab" },
+    { "id": "delete", "keys": "Delete" },
+    { "id": "backspace", "keys": "Backspace" },
+    { "id": "undo", "keys": "Ctrl+Z" },
+    { "id": "redo", "keys": "Ctrl+Y" },
+    { "id": "read_element", "keys": "Ctrl+L" },
+    { "id": "read_line", "keys": "Ctrl+Shift+L" },
+    { "id": "calculate", "keys": "Ctrl+Return" }
+  ]
+}

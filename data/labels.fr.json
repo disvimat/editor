@@ -1,0 +1,62 @@
+{
+  "table": "labels",
+  "version": 1,
+  "language": "fr",
+  "entries": [
+    { "id": "plus", "label": "plus" },
+    { "id": "minus", "label": "moins" },
+    { "id": "times", "label": "fois" },
+    { "id": "divide", "label": "divisé par" },
+    { "id": "equals", "label": "égale" },
+    { "id": "not_equal", "label": "différent de" },
+    { "id": "less_than", "label": "inférieur à" },
+    { "id": "greater_than", "label": "supérieur à" },
+    { "id": "less_equal", "label": "inférieur ou égal à" },
+    { "id": "greater_equal", "label": "supérieur ou égal à" },
+    { "id": "plus_minus", "label": "plus ou moins" },
+    { "id": "percent", "label": "pour cent" },
+    { "id": "decimal_point", "label": "virgule" },
+    {
+      "id": "fraction",
+      "label": "fraction",
+      "parts": { "start": "fraction", "separator": "sur", "end": "fin de fraction" }
+    },
+    {
+      "id": "power",
+      "label": "puissance",
+      "parts": { "separator": "puissance", "end": "fin d'exposant" }
+    },
+    {
+      "id": "subscript",
+      "label": "indice",
+      "parts": { "separator": "indice", "end": "fin d'indice" }
+    },
+    {
+      "id": "sqrt",
+      "label": "racine carrée",
+      "parts": { "start": "racine carrée de", "end": "fin de racine" }
+    },
+    {
+      "id": "nth_root",
+      "label": "racine",
+      "parts": { "start": "racine", "separator": "d'indice", "end": "fin de racine" }
+    },
+    { "id": "slot", "label": "case vide" },
+    { "id": "number_prefix", "label": "nombre" },
+    { "id": "capital", "label": "majuscule" },
+    { "id": "left", "label": "gauche" },
+    { "id": "right", "label": "droite" },
+    { "id": "line_start", "label": "début de ligne" },
+    { "id": "line_end", "label": "fin de ligne" },
+    { "id": "enter_structure", "label": "entrer dans la structure" },
+    { "id": "exit_structure", "label": "sortir de la structure" },
+    { "id": "next_slot", "label": "case suivante" },
+    { "id": "delete", "label": "supprimer" },
+    { "id": "backspace", "label": "retour arrière" },
+    { "id": "undo", "label": "annuler" },
+    { "id": "redo", "label": "rétablir" },
+    { "id": "read_element", "label": "lire l'élément" },
+    { "id": "read_line", "label": "lire la ligne" },
+    { "id": "calculate", "label": "résultat" }
+  ]
+}

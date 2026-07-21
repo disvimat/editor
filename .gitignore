@@ -20,9 +20,6 @@ env/
 dist/
 build/
 
-# --- Traducciones compiladas (se generan desde los .po) ---
-*.mo
-
 # --- Secretos y configuración local ---
 .env
 .env.*
