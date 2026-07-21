@@ -1,67 +1,64 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{language}}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>DISVIMAT — Editor científico accesible</title>
+<title>{{app_title}}</title>
 <link rel="stylesheet" href="/static/editor.css"/>
 </head>
-<body>
-<a class="salto" href="#editor">Saltar al editor</a>
+<body data-language="{{language}}">
+<a class="skip" href="#editor">{{skip_to_editor}}</a>
 <header>
-  <h1>DISVIMAT — Editor científico accesible</h1>
+  <h1>{{app_title}}</h1>
 </header>
 <main>
-  <section aria-labelledby="titulo-editor">
-    <h2 id="titulo-editor" class="oculto-visual">Editor</h2>
+  <section aria-labelledby="editor-heading">
+    <h2 id="editor-heading" class="visually-hidden">{{heading_editor}}</h2>
 
     <div id="editor" role="application" tabindex="0"
-         aria-label="Editor de expresiones matemáticas"
-         aria-describedby="ayuda-breve">
+         aria-label="{{editor_label}}"
+         aria-describedby="short-help">
       <div id="math" class="math"></div>
-      <p id="linea" class="linea" aria-hidden="true"></p>
+      <p id="line" class="line" aria-hidden="true"></p>
     </div>
-    <p id="ayuda-breve" class="oculto-visual">
-      Escriba números y operadores. Control F fracción, Control R raíz,
-      Control P potencia, Tabulador siguiente hueco, flechas para navegar,
-      Control Intro calcular, Control Mayúsculas L leer la línea.
-    </p>
+    <p id="short-help" class="visually-hidden">{{help_intro}}</p>
 
-    <!-- Barra de estado visible (no es región viva para no duplicar la voz). -->
-    <p id="estado" class="estado"></p>
+    <!-- Visible status bar (not a live region, to avoid double speech). -->
+    <p id="status" class="status"></p>
   </section>
 
-  <section aria-labelledby="titulo-acciones" class="acciones">
-    <h2 id="titulo-acciones" class="oculto-visual">Acciones</h2>
-    <button type="button" id="btn-calcular">Calcular</button>
-    <button type="button" id="btn-exportar-xhtml">Exportar XHTML</button>
-    <button type="button" id="btn-exportar-bra">Exportar braille (BRA)</button>
-    <label class="importar">
-      Importar XHTML
-      <input type="file" id="archivo" accept=".xhtml,.html,.xml"/>
+  <section aria-labelledby="actions-heading" class="actions">
+    <h2 id="actions-heading" class="visually-hidden">{{heading_actions}}</h2>
+    <button type="button" id="btn-calculate">{{button_calculate}}</button>
+    <button type="button" id="btn-export-xhtml">{{button_export_xhtml}}</button>
+    <button type="button" id="btn-export-bra">{{button_export_bra}}</button>
+    <label class="import">
+      {{button_import}}
+      <input type="file" id="file" accept=".xhtml,.html,.xml"/>
     </label>
   </section>
 
-  <section aria-labelledby="titulo-ayuda" class="ayuda">
-    <h2 id="titulo-ayuda">Teclas</h2>
+  <section aria-labelledby="keys-heading" class="help">
+    <h2 id="keys-heading">{{heading_keys}}</h2>
     <dl>
-      <dt>Números y letras, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>=</kbd></dt>
-      <dd>Insertan el signo correspondiente.</dd>
-      <dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>Fracción.</dd>
+      <dt>0-9, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>=</kbd></dt>
+      <dd>{{help_signs}}</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>{{help_fraction}}</dd>
       <dt><kbd>Ctrl</kbd>+<kbd>R</kbd> / <kbd>Ctrl</kbd>+<kbd>P</kbd></dt>
-      <dd>Raíz cuadrada / potencia.</dd>
-      <dt><kbd>Tab</kbd></dt><dd>Siguiente hueco de la estructura.</dd>
-      <dt>Flechas, <kbd>Inicio</kbd>, <kbd>Fin</kbd></dt><dd>Navegación.</dd>
-      <dt><kbd>Supr</kbd> / <kbd>Retroceso</kbd></dt><dd>Borrar.</dd>
-      <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt><dd>Deshacer / rehacer.</dd>
-      <dt><kbd>Ctrl</kbd>+<kbd>Intro</kbd></dt><dd>Calcular el resultado.</dd>
-      <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></dt><dd>Leer la línea completa.</dd>
+      <dd>{{help_root_power}}</dd>
+      <dt><kbd>Tab</kbd></dt><dd>{{help_next_slot}}</dd>
+      <dt><kbd>&larr;</kbd> <kbd>&rarr;</kbd> <kbd>Home</kbd> <kbd>End</kbd></dt>
+      <dd>{{help_navigation}}</dd>
+      <dt><kbd>Delete</kbd> / <kbd>Backspace</kbd></dt><dd>{{help_delete}}</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt><dd>{{help_undo}}</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>Enter</kbd></dt><dd>{{help_calculate}}</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></dt><dd>{{help_read_line}}</dd>
     </dl>
   </section>
 </main>
 
-<!-- Única región viva: anuncia cada acción a la síntesis de voz. -->
-<div id="anuncio" class="oculto-visual" aria-live="assertive" aria-atomic="true"></div>
+<!-- The single live region: announces every action to speech synthesis. -->
+<div id="announcement" class="visually-hidden" aria-live="assertive" aria-atomic="true"></div>
 
 <script src="/static/editor.js"></script>
 </body>

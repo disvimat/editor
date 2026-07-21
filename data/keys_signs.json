@@ -1,0 +1,25 @@
+{
+  "table": "keys_signs",
+  "version": 1,
+  "language": null,
+  "entries": [
+    { "id": "plus", "keys": "+" },
+    { "id": "minus", "keys": "-" },
+    { "id": "times", "keys": "*" },
+    { "id": "divide", "keys": "/" },
+    { "id": "equals", "keys": "=" },
+    { "id": "not_equal", "keys": "Ctrl+=" },
+    { "id": "less_than", "keys": "<" },
+    { "id": "greater_than", "keys": ">" },
+    { "id": "less_equal", "keys": "Ctrl+<" },
+    { "id": "greater_equal", "keys": "Ctrl+>" },
+    { "id": "plus_minus", "keys": "Ctrl+M" },
+    { "id": "percent", "keys": "%" },
+    { "id": "decimal_point", "keys": "," },
+    { "id": "fraction", "keys": "Ctrl+F" },
+    { "id": "power", "keys": "Ctrl+P" },
+    { "id": "subscript", "keys": "Ctrl+B" },
+    { "id": "sqrt", "keys": "Ctrl+R" },
+    { "id": "nth_root", "keys": "Ctrl+Shift+R" }
+  ]
+}

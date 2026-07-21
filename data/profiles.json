@@ -1,0 +1,11 @@
+{
+  "table": "profiles",
+  "version": 1,
+  "language": null,
+  "entries": [
+    { "id": "beginner", "level": 1 },
+    { "id": "intermediate", "level": 2 },
+    { "id": "advanced", "level": 3 },
+    { "id": "exam", "level": 3, "calculator": false }
+  ]
+}

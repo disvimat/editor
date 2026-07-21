@@ -1,7 +1,7 @@
-"""Adaptador web (FastAPI): la misma lógica del núcleo servida por HTTP.
+"""Web adapter (FastAPI): the same core logic served over HTTP.
 
-La página es HTML semántico con MathML nativo y regiones ARIA en vivo;
-no reimplementa nada del editor: cada pulsación viaja al núcleo y la
-respuesta trae el texto lineal, el MathML y la verbalización, idénticos
-a los de la versión de escritorio.
+The page is semantic HTML with native MathML and a live ARIA region; it
+reimplements nothing of the editor: every key stroke travels to the core
+and the answer carries the linear text, the MathML and the speech,
+identical to the desktop version.
 """

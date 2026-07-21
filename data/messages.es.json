@@ -1,0 +1,10 @@
+{
+  "table": "messages",
+  "version": 1,
+  "language": "es",
+  "entries": [
+    { "id": "expression_not_computable", "text": "la expresión no se puede calcular" },
+    { "id": "division_by_zero", "text": "división entre cero" },
+    { "id": "calculator_locked", "text": "calculadora bloqueada" }
+  ]
+}

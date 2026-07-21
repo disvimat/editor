@@ -13,6 +13,10 @@ if not exist ".venv\Scripts\python.exe" (
     if errorlevel 1 goto :error
 )
 
+rem Interfaz y voz en espanol (el codigo y las tablas de referencia estan en
+rem ingles). Cambie a en o fr para arrancar en otro idioma.
+set DISVIMAT_LANG=es
+
 start "DISVIMAT" ".venv\Scripts\pythonw.exe" -m disvimat.desktop
 exit /b 0
 

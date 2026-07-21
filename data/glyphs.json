@@ -1,0 +1,28 @@
+{
+  "table": "glyphs",
+  "version": 1,
+  "language": null,
+  "entries": [
+    { "id": "plus", "glyph": "+" },
+    { "id": "minus", "glyph": "−" },
+    { "id": "times", "glyph": "×" },
+    { "id": "divide", "glyph": "÷" },
+    { "id": "equals", "glyph": "=" },
+    { "id": "not_equal", "glyph": "≠" },
+    { "id": "less_than", "glyph": "<" },
+    { "id": "greater_than", "glyph": ">" },
+    { "id": "less_equal", "glyph": "≤" },
+    { "id": "greater_equal", "glyph": "≥" },
+    { "id": "plus_minus", "glyph": "±" },
+    { "id": "percent", "glyph": "%" },
+    { "id": "decimal_point", "glyph": "," },
+    { "id": "fraction", "glyph": "∕", "template": "({1}∕{2})" },
+    { "id": "power", "glyph": "^", "template": "{1}^({2})" },
+    { "id": "subscript", "glyph": "_", "template": "{1}_({2})" },
+    { "id": "sqrt", "glyph": "√", "template": "√({1})" },
+    { "id": "nth_root", "glyph": "√", "template": "√[{2}]({1})" },
+    { "id": "slot", "glyph": "□" },
+    { "id": "number_prefix", "glyph": "#" },
+    { "id": "capital", "glyph": "^" }
+  ]
+}

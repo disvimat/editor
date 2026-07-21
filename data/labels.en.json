@@ -1,0 +1,62 @@
+{
+  "table": "labels",
+  "version": 1,
+  "language": "en",
+  "entries": [
+    { "id": "plus", "label": "plus" },
+    { "id": "minus", "label": "minus" },
+    { "id": "times", "label": "times" },
+    { "id": "divide", "label": "divided by" },
+    { "id": "equals", "label": "equals" },
+    { "id": "not_equal", "label": "not equal to" },
+    { "id": "less_than", "label": "less than" },
+    { "id": "greater_than", "label": "greater than" },
+    { "id": "less_equal", "label": "less than or equal to" },
+    { "id": "greater_equal", "label": "greater than or equal to" },
+    { "id": "plus_minus", "label": "plus or minus" },
+    { "id": "percent", "label": "percent" },
+    { "id": "decimal_point", "label": "point" },
+    {
+      "id": "fraction",
+      "label": "fraction",
+      "parts": { "start": "fraction", "separator": "over", "end": "end of fraction" }
+    },
+    {
+      "id": "power",
+      "label": "power",
+      "parts": { "separator": "to the power of", "end": "end of exponent" }
+    },
+    {
+      "id": "subscript",
+      "label": "subscript",
+      "parts": { "separator": "sub", "end": "end of subscript" }
+    },
+    {
+      "id": "sqrt",
+      "label": "square root",
+      "parts": { "start": "square root of", "end": "end of root" }
+    },
+    {
+      "id": "nth_root",
+      "label": "root",
+      "parts": { "start": "root", "separator": "of index", "end": "end of root" }
+    },
+    { "id": "slot", "label": "blank" },
+    { "id": "number_prefix", "label": "number" },
+    { "id": "capital", "label": "capital" },
+    { "id": "left", "label": "left" },
+    { "id": "right", "label": "right" },
+    { "id": "line_start", "label": "start of line" },
+    { "id": "line_end", "label": "end of line" },
+    { "id": "enter_structure", "label": "enter structure" },
+    { "id": "exit_structure", "label": "exit structure" },
+    { "id": "next_slot", "label": "next blank" },
+    { "id": "delete", "label": "delete" },
+    { "id": "backspace", "label": "backspace" },
+    { "id": "undo", "label": "undo" },
+    { "id": "redo", "label": "redo" },
+    { "id": "read_element", "label": "read element" },
+    { "id": "read_line", "label": "read line" },
+    { "id": "calculate", "label": "result" }
+  ]
+}

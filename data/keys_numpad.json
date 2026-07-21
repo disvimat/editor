@@ -1,0 +1,11 @@
+{
+  "table": "keys_numpad",
+  "version": 1,
+  "language": null,
+  "entries": [
+    { "id": "plus", "keys": "NumAdd" },
+    { "id": "minus", "keys": "NumSubtract" },
+    { "id": "times", "keys": "NumMultiply" },
+    { "id": "fraction", "keys": "NumDivide" }
+  ]
+}
