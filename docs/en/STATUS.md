@@ -43,7 +43,7 @@ tables, modules A10/B7).
 | B2 labels / speech per language | **done** | English, Spanish and French |
 | B3 br8 (NVDA and braille displays) | **pending** | Needs a dedicated NVDA add-on |
 | B4 graphical presentation window | **done** | Native text control (desktop) and native MathML (web) |
-| B5 br6 transcriber | **partial** | The engine is table-driven and complete; **the Spanish cell values are provisional and must be reviewed against the CBE standard**; no English (UEB) or French (NMB) tables |
+| B5 br6 transcriber | **partial** | The engine is table-driven and complete; **the Spanish cell values are provisional**. The [MathCAT](MATHCAT.md) seam is in place, which brings normative CMU braille as soon as its binding is built — that supersedes reviewing our own tables by hand |
 | B6 br6 window | **partial** | The window shows and follows the transcription; navigating *inside* the braille window is not implemented |
 | B7 presentation of 2D structures | **pending** | |
 | B8 presentation of 2D algorithms | **pending** | |
@@ -111,9 +111,12 @@ These are not in the original module list but matter for real use:
 
 ## Suggested next steps
 
-1. Review the braille tables with a braille specialist (B5/C3) — cheap,
-   high impact, and it is only data.
-2. NVDA add-on for braille displays and direct speech (B3/E1).
+1. **Build the MathCAT Python binding** ([MATHCAT.md](MATHCAT.md)). The
+   adapter and the fallback policy are already written and tested, so this
+   single step turns on normative CMU braille and notation reading, and
+   settles the braille question without hand-reviewing our tables.
+2. NVDA add-on for braille displays and direct speech (B3/E1) — MathCAT's
+   own NVDA add-on is the reference implementation to follow.
 3. Native document format with save and open, plus multi-line documents.
 4. Two-dimensional structures (A10/B7): matrices and tables.
 5. PDF (C2) and MP3 (C4) export.

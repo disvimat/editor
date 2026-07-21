@@ -42,6 +42,18 @@ _ASCII_BRAILLE = " a1b'k2l@cif/msp\"e3h9o6r^djg>ntq,*5<-u8v.%[$+x!&;:4\\0z7(_?w]
 _UNKNOWN_CELL = 0b111111
 
 
+def unicode_to_ascii(braille: str) -> str:
+    """Convert unicode braille (U+2800...) into ASCII braille.
+
+    Shared with any external engine that returns unicode braille, so the
+    ``.BRA`` export uses one single encoding whatever produced the cells.
+    """
+    return "".join(
+        _ASCII_BRAILLE[ord(character) - 0x2800] if 0x2800 <= ord(character) <= 0x283F else character
+        for character in braille
+    )
+
+
 class BrailleTablesMissing(FileNotFoundError):
     """There are no braille tables for the requested language."""
 

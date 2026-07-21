@@ -15,6 +15,7 @@ expression on screen, as speech, in braille, and as exportable files.
 | How it is built | [ARCHITECTURE](docs/en/ARCHITECTURE.md) | [ARCHITECTURE](docs/es/ARCHITECTURE.md) | [ARCHITECTURE](docs/fr/ARCHITECTURE.md) |
 | Changing it without code | [TABLES](docs/en/TABLES.md) | [TABLES](docs/es/TABLES.md) | [TABLES](docs/fr/TABLES.md) |
 | What is done, what is missing | [STATUS](docs/en/STATUS.md) | [STATUS](docs/es/STATUS.md) | [STATUS](docs/fr/STATUS.md) |
+| External speech and braille engine | [MATHCAT](docs/en/MATHCAT.md) | [MATHCAT](docs/es/MATHCAT.md) | [MATHCAT](docs/fr/MATHCAT.md) |
 
 The original project brief, in Spanish, is preserved at
 [docs/BRIEF.es.md](docs/BRIEF.es.md); it is the source of the module
@@ -61,11 +62,13 @@ Branch workflow: work happens on a topic branch, is merged into `dev` for
 testing (continuous integration plus manual NVDA checks), and only reaches
 `main` once validated.
 
-> **Braille notice.** The braille engine is complete, but the Spanish cell
-> values are **provisional** and must be reviewed against the CBE
-> mathematical braille standard before classroom use. Braille tables never
-> fall back to another language: when a language has no table, braille
-> features are disabled rather than showing another country's braille.
+> **Braille notice.** Our own braille engine is complete, but the Spanish
+> cell values are **provisional**. The project integrates
+> [MathCAT](docs/en/MATHCAT.md) (DAISY), which implements the normative CMU
+> code; once its binding is built, MathCAT provides the braille and our
+> tables become the fallback. Braille never falls back across languages:
+> a language with no braille source has its braille features disabled
+> rather than showing another country's braille.
 
 ## Licence
 

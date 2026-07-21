@@ -18,13 +18,10 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from disvimat.backends import create_outputs
 from disvimat.core.editor import Editor, Result, create_editor
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
-from disvimat.core.transcription.braille import (
-    BrailleTablesMissing,
-    BrailleTranscriber,
-    create_transcriber,
-)
+from disvimat.core.tables import Catalog, data_dir
 from disvimat.core.ui_text import UIText
 from disvimat.export.xhtml import XHTMLExporter
 
@@ -58,14 +55,15 @@ class _Session:
 
     def __init__(self, language: str, profile: str | None) -> None:
         self.language = language
-        self.editor: Editor = create_editor(language=language, profile=profile)
+        catalog = Catalog.load(data_dir() / "elements.json")
+        # MathCAT when available, our tables otherwise; braille stays
+        # unavailable rather than serving another language's braille.
+        outputs = create_outputs(catalog, language)
+        self.editor: Editor = create_editor(
+            language=language, profile=profile, reader=outputs.reader
+        )
         self.exporter = XHTMLExporter(self.editor.catalog)
-        try:
-            self.transcriber: BrailleTranscriber | None = create_transcriber(language=language)
-        except BrailleTablesMissing:
-            # No braille tables for this language: braille stays unavailable
-            # rather than silently serving another language's braille.
-            self.transcriber = None
+        self.transcriber = outputs.braille
 
     def mathml(self) -> str:
         element = self.exporter.mathml(self.editor.document.root)

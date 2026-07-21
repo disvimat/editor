@@ -38,6 +38,10 @@ class XHTMLExporter:
         self._fill(math, nodes)
         return math
 
+    def mathml_text(self, nodes: list[Node]) -> str:
+        """The ``<math>`` element serialised, ready for an external engine."""
+        return ET.tostring(self.mathml(nodes), encoding="unicode")
+
     def xhtml_document(
         self, nodes: list[Node], title: str = "DISVIMAT document", language: str = "en"
     ) -> str:

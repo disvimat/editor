@@ -22,6 +22,11 @@ web = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
 ]
+# MathCAT (DAISY) for speech and normative braille. It is NOT on PyPI: the
+# Python binding is built from the Rust sources, so this extra lists no
+# requirement and the application degrades to its own tables when the
+# library is absent. See docs/en/MATHCAT.md.
+mathcat = []
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",

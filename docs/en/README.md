@@ -10,6 +10,7 @@ ways: on screen, as speech, in braille and as exportable files.
 - [Architecture](ARCHITECTURE.md) — how the project is built and why.
 - [Tables](TABLES.md) — the data that drives the editor's behaviour.
 - [Status](STATUS.md) — what is done and what is missing.
+- [MathCAT](MATHCAT.md) — the external speech and braille engine.
 
 ## Requirements
 

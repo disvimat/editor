@@ -44,7 +44,7 @@ bidimensionnelles** (matrices et tableaux, modules A10/B7).
 | B2 étiquettes / oralisation par langue | **fait** | Anglais, espagnol et français |
 | B3 br8 (NVDA et afficheurs braille) | **à faire** | Nécessite un module complémentaire NVDA dédié |
 | B4 fenêtre de présentation graphique | **fait** | Contrôle texte natif (bureau) et MathML natif (web) |
-| B5 transcripteur br6 | **partiel** | Le moteur est complet et piloté par tables ; **les valeurs espagnoles sont provisoires et doivent être vérifiées auprès de la CBE** ; pas de table anglaise (UEB) ni française (NMB) |
+| B5 transcripteur br6 | **partiel** | Le moteur est complet et piloté par tables ; **les valeurs espagnoles sont provisoires**. La couture [MathCAT](MATHCAT.md) est en place et apportera le braille CMU normatif dès que son interface sera compilée, ce qui remplace la vérification manuelle de nos tables |
 | B6 fenêtre br6 | **partiel** | La fenêtre affiche et suit la transcription ; la navigation *à l'intérieur* de la fenêtre braille manque |
 | B7 présentation des structures 2D | **à faire** | |
 | B8 présentation des algorithmes 2D | **à faire** | |
@@ -117,10 +117,13 @@ un usage réel :
 
 ## Prochaines étapes suggérées
 
-1. Faire vérifier les tables braille par un spécialiste (B5/C3) : peu
-   coûteux, à fort impact, et ce ne sont que des données.
+1. **Compiler l'interface Python de MathCAT** ([MATHCAT.md](MATHCAT.md)).
+   L'adaptateur et la politique de secours sont déjà écrits et testés :
+   cette seule étape active le braille CMU normatif et la lecture de la
+   notation, et règle la question du braille sans vérifier nos tables à la
+   main.
 2. Module complémentaire NVDA pour les afficheurs braille et la voix
-   directe (B3/E1).
+   directe (B3/E1) ; le module NVDA de MathCAT est la référence à suivre.
 3. Format de document propre avec enregistrement et ouverture, et documents
    multi-lignes.
 4. Structures bidimensionnelles (A10/B7) : matrices et tableaux.
