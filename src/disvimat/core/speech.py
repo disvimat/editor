@@ -29,6 +29,10 @@ class Speaker:
             case Structure():
                 return self._structure(node)
 
+    def read(self, nodes: list[Node]) -> str:
+        """Read a whole expression (the :class:`ExpressionReader` port)."""
+        return self.sequence(nodes)
+
     def sequence(self, nodes: list[Node]) -> str:
         if not nodes:
             return self.label(SLOT_ID)

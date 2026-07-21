@@ -14,6 +14,7 @@ from disvimat.core.calculator import CalculationError, Calculator
 from disvimat.core.document import Character, Document, Node, Sign, Structure
 from disvimat.core.elements import SLOT_ID, ElementType
 from disvimat.core.keyboard import Keyboard
+from disvimat.core.output import ExpressionReader
 from disvimat.core.presentation import Presenter
 from disvimat.core.speech import Speaker
 from disvimat.core.tables import (
@@ -55,6 +56,7 @@ class Editor:
         messages: dict[str, str],
         *,
         calculator_allowed: bool = True,
+        reader: ExpressionReader | None = None,
     ) -> None:
         self.catalog = catalog
         self.document = Document()
@@ -64,6 +66,9 @@ class Editor:
         self._calculator = calculator
         self._messages = messages
         self._calculator_allowed = calculator_allowed
+        # Reading a whole expression may come from an external engine
+        # (MathCAT); the editing feedback always comes from the labels.
+        self._reader: ExpressionReader = reader if reader is not None else speaker
         self._commands: dict[str, Callable[[], str]] = {
             "left": self._cmd_left,
             "right": self._cmd_right,
@@ -191,7 +196,7 @@ class Editor:
         return f"{self._speaker.label('calculate')}: {value}"
 
     def _cmd_read_line(self) -> str:
-        return self._speaker.sequence(self.document.root)
+        return self._reader.read(self.document.root)
 
     def _read_current(self) -> str:
         node = self.document.node_right()
@@ -208,12 +213,17 @@ class Editor:
 
 
 def create_editor(
-    directory: Path | None = None, language: str = "en", profile: str | None = None
+    directory: Path | None = None,
+    language: str = "en",
+    profile: str | None = None,
+    reader: ExpressionReader | None = None,
 ) -> Editor:
     """Build an editor loading every table from the data directory.
 
     ``language`` resolves the language-dependent tables (falling back to
-    the reference language, E6); ``profile`` limits elements by level (A7).
+    the reference language, E6); ``profile`` limits elements by level (A7);
+    ``reader`` optionally replaces the table speaker when reading a whole
+    expression (see :mod:`disvimat.backends`).
     """
     directory = directory or data_dir()
     catalog = Catalog.load(directory / "elements.json")
@@ -246,4 +256,5 @@ def create_editor(
         Calculator(),
         messages,
         calculator_allowed=calculator_allowed,
+        reader=reader,
     )

@@ -11,6 +11,7 @@ dans des fichiers exportables.
 - [Architecture](ARCHITECTURE.md) — comment le projet est construit, et pourquoi.
 - [Tables](TABLES.md) — les données qui régissent le comportement de l'éditeur.
 - [État](STATUS.md) — ce qui est fait et ce qui manque.
+- [MathCAT](MATHCAT.md) — le moteur externe de parole et de braille.
 
 ## Prérequis
 

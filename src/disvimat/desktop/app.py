@@ -11,13 +11,11 @@ import os
 
 import wx
 
+from disvimat.backends import create_outputs
 from disvimat.core.editor import Editor, Result, create_editor
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
-from disvimat.core.transcription.braille import (
-    BrailleTablesMissing,
-    BrailleTranscriber,
-    create_transcriber,
-)
+from disvimat.core.output import BrailleProvider
+from disvimat.core.tables import Catalog, data_dir
 from disvimat.core.ui_text import UIText
 from disvimat.export.xhtml import XHTMLExporter
 
@@ -83,9 +81,7 @@ class BrailleWindow(wx.Frame):
 class EditorWindow(wx.Frame):
     """The accessible linear editor window."""
 
-    def __init__(
-        self, editor: Editor, transcriber: BrailleTranscriber | None, text: UIText
-    ) -> None:
+    def __init__(self, editor: Editor, transcriber: BrailleProvider | None, text: UIText) -> None:
         super().__init__(None, title=text("app_title"))
         self._editor = editor
         self._transcriber = transcriber
@@ -233,14 +229,12 @@ class EditorWindow(wx.Frame):
 def main() -> None:
     language = os.environ.get("DISVIMAT_LANG", "en")
     profile = os.environ.get("DISVIMAT_PROFILE")
-    try:
-        transcriber: BrailleTranscriber | None = create_transcriber(language=language)
-    except BrailleTablesMissing:
-        transcriber = None
+    catalog = Catalog.load(data_dir() / "elements.json")
+    outputs = create_outputs(catalog, language)
     app = wx.App()
     window = EditorWindow(
-        create_editor(language=language, profile=profile),
-        transcriber,
+        create_editor(language=language, profile=profile, reader=outputs.reader),
+        outputs.braille,
         UIText.load(language=language),
     )
     window.Show()
