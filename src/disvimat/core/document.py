@@ -41,32 +41,53 @@ Node = Character | Sign | Structure
 
 @dataclass
 class _Cursor:
-    """Editing position: descent through structures + index in the sequence.
+    """Editing position: line + descent through structures + index.
 
-    Each step of the path is ``(index of the structure node, slot index)``.
+    ``line`` selects the document line; ``path`` descends through
+    structures within that line; each step is ``(structure node index,
+    slot index)``; ``index`` is the position in the current sequence.
     """
 
+    line: int = 0
     path: list[tuple[int, int]] = field(default_factory=list)
     index: int = 0
 
 
+#: A line is a sequence of nodes (the same tree as before, one per line).
+Line = list[Node]
+
+
 class Document:
-    """A document being edited, with cursor and snapshot-based undo/redo."""
+    """A multi-line document, with cursor and snapshot-based undo/redo."""
 
     #: Maximum number of snapshots kept for undo.
     UNDO_LIMIT = 200
 
     def __init__(self) -> None:
-        self.root: list[Node] = []
+        self.lines: list[Line] = [[]]
         self._cursor = _Cursor()
-        self._past: list[tuple[list[Node], _Cursor]] = []
-        self._future: list[tuple[list[Node], _Cursor]] = []
+        self._past: list[tuple[list[Line], _Cursor]] = []
+        self._future: list[tuple[list[Line], _Cursor]] = []
 
     # --- state ------------------------------------------------------------
 
+    @property
+    def root(self) -> Line:
+        """The current line's nodes (the sequence the cursor's line holds)."""
+        return self.lines[self._cursor.line]
+
+    def current_line(self) -> Line:
+        return self.lines[self._cursor.line]
+
+    def cursor_line(self) -> int:
+        return self._cursor.line
+
+    def line_count(self) -> int:
+        return len(self.lines)
+
     def current_sequence(self) -> list[Node]:
-        """The sequence (root or slot) the cursor is in."""
-        sequence = self.root
+        """The sequence (line or slot) the cursor is in."""
+        sequence = self.current_line()
         for node_index, slot_index in self._cursor.path:
             node = sequence[node_index]
             assert isinstance(node, Structure)
@@ -83,7 +104,7 @@ class Document:
         """The structure whose slot holds the cursor, if any."""
         if not self._cursor.path:
             return None
-        sequence = self.root
+        sequence = self.current_line()
         for node_index, slot_index in self._cursor.path[:-1]:
             node = sequence[node_index]
             assert isinstance(node, Structure)
@@ -99,8 +120,12 @@ class Document:
             return sequence[self._cursor.index]
         return None
 
+    def at_top_level(self) -> bool:
+        """Whether the cursor is directly on a line, not inside a structure."""
+        return not self._cursor.path
+
     def is_empty(self) -> bool:
-        return not self.root
+        return len(self.lines) == 1 and not self.lines[0]
 
     # --- editing ----------------------------------------------------------
 
@@ -116,10 +141,55 @@ class Document:
             self._cursor.index += 1
 
     def load(self, nodes: list[Node]) -> None:
-        """Replace the whole content (imports); undoable."""
+        """Replace the whole content with a single line (imports); undoable."""
+        self.load_lines([nodes])
+
+    def load_lines(self, lines: list[Line]) -> None:
+        """Replace the whole document with the given lines; undoable."""
         self._save_snapshot()
-        self.root = nodes
-        self._cursor = _Cursor(index=len(nodes))
+        self.lines = lines if lines else [[]]
+        last = len(self.lines) - 1
+        self._cursor = _Cursor(line=last, index=len(self.lines[last]))
+
+    def new_line(self) -> bool:
+        """Split the current line at the cursor into a new line below.
+
+        Only acts at the top level; inside a structure it does nothing.
+        """
+        if not self.at_top_level():
+            return False
+        self._save_snapshot()
+        line = self.current_line()
+        tail = line[self._cursor.index :]
+        del line[self._cursor.index :]
+        self.lines.insert(self._cursor.line + 1, tail)
+        self._cursor = _Cursor(line=self._cursor.line + 1, index=0)
+        return True
+
+    def merge_with_previous_line(self) -> bool:
+        """Join the current line onto the previous one (backspace at start)."""
+        if not self.at_top_level() or self._cursor.index != 0 or self._cursor.line == 0:
+            return False
+        self._save_snapshot()
+        previous = self.lines[self._cursor.line - 1]
+        join = len(previous)
+        previous.extend(self.current_line())
+        del self.lines[self._cursor.line]
+        self._cursor = _Cursor(line=self._cursor.line - 1, index=join)
+        return True
+
+    def merge_with_next_line(self) -> bool:
+        """Join the next line onto the current one (delete at end)."""
+        if (
+            not self.at_top_level()
+            or self._cursor.index != len(self.current_line())
+            or self._cursor.line >= len(self.lines) - 1
+        ):
+            return False
+        self._save_snapshot()
+        self.current_line().extend(self.lines[self._cursor.line + 1])
+        del self.lines[self._cursor.line + 1]
+        return True
 
     def backspace(self) -> Node | None:
         """Delete the node to the left of the cursor and return it."""
@@ -160,6 +230,22 @@ class Document:
 
     def to_line_end(self) -> None:
         self._cursor.index = len(self.current_sequence())
+
+    def line_up(self) -> bool:
+        """Move to the previous document line (top level only)."""
+        if not self.at_top_level() or self._cursor.line == 0:
+            return False
+        self._cursor.line -= 1
+        self._cursor.index = len(self.current_line())
+        return True
+
+    def line_down(self) -> bool:
+        """Move to the next document line (top level only)."""
+        if not self.at_top_level() or self._cursor.line >= len(self.lines) - 1:
+            return False
+        self._cursor.line += 1
+        self._cursor.index = len(self.current_line())
+        return True
 
     def enter(self) -> Structure | None:
         """Enter the first slot of the structure right of the cursor."""
@@ -203,18 +289,18 @@ class Document:
         if not self._past:
             return False
         self._future.append(self._snapshot())
-        self.root, self._cursor = self._past.pop()
+        self.lines, self._cursor = self._past.pop()
         return True
 
     def redo(self) -> bool:
         if not self._future:
             return False
         self._past.append(self._snapshot())
-        self.root, self._cursor = self._future.pop()
+        self.lines, self._cursor = self._future.pop()
         return True
 
-    def _snapshot(self) -> tuple[list[Node], _Cursor]:
-        return copy.deepcopy((self.root, self._cursor))
+    def _snapshot(self) -> tuple[list[Line], _Cursor]:
+        return copy.deepcopy((self.lines, self._cursor))
 
     def _save_snapshot(self) -> None:
         self._past.append(self._snapshot())

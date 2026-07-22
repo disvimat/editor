@@ -100,6 +100,29 @@ def test_braille_export_is_unicode(client: TestClient) -> None:
     assert client.get(f"/api/session/{english}/export.brl").status_code == 409
 
 
+def test_multiline_and_dvm_round_trip(client: TestClient) -> None:
+    session = new_session(client)
+    send(client, session, "1", "1")
+    send(client, session, "Return")  # new line
+    view = send(client, session, "2", "2")
+    assert view["text"] == "1\n2"  # two document lines
+    assert "<br/>" in view["mathml"]  # rendered as two <math> elements
+
+    dvm = client.get(f"/api/session/{session}/export.dvm")
+    assert dvm.status_code == 200
+    assert '"format": "disvimat-document"' in dvm.text
+
+    other = new_session(client)
+    reopened = client.post(f"/api/session/{other}/open", json={"dvm": dvm.text}).json()
+    assert reopened["text"] == "1\n2"
+
+
+def test_opening_bad_dvm_gives_400(client: TestClient) -> None:
+    session = new_session(client)
+    response = client.post(f"/api/session/{session}/open", json={"dvm": "{ not json"})
+    assert response.status_code == 400
+
+
 def test_unknown_session_gives_404(client: TestClient) -> None:
     response = client.post("/api/session/nonexistent/key", json={"keys": "1", "character": "1"})
     assert response.status_code == 404

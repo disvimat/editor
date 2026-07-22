@@ -33,6 +33,7 @@
     { "id": "next_slot", "type": "command", "category": "navigation" },
     { "id": "delete", "type": "command", "category": "editing" },
     { "id": "backspace", "type": "command", "category": "editing" },
+    { "id": "new_line", "type": "command", "category": "editing" },
     { "id": "undo", "type": "command", "category": "editing" },
     { "id": "redo", "type": "command", "category": "editing" },
     { "id": "read_element", "type": "command", "category": "reading" },

@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from disvimat.backends import create_outputs
+from disvimat.core.dvm import DvmError, from_dvm, to_dvm
 from disvimat.core.editor import Editor, Result, create_editor
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
 from disvimat.core.tables import Catalog, data_dir
@@ -50,6 +51,10 @@ class ImportRequest(BaseModel):
     xhtml: str
 
 
+class OpenRequest(BaseModel):
+    dvm: str
+
+
 class _Session:
     """Editor and export helpers of one user session."""
 
@@ -66,8 +71,15 @@ class _Session:
         self.transcriber = outputs.braille
 
     def mathml(self) -> str:
-        element = self.exporter.mathml(self.editor.document.root)
-        return ET.tostring(element, encoding="unicode")
+        # One <math> per document line, so multi-line documents render whole.
+        return "<br/>".join(
+            ET.tostring(self.exporter.mathml(line), encoding="unicode")
+            for line in self.editor.document.lines
+        )
+
+    def braille(self) -> str:
+        assert self.transcriber is not None
+        return "\n".join(self.transcriber.unicode(line) for line in self.editor.document.lines)
 
 
 def render_page(language: str) -> str:
@@ -145,8 +157,8 @@ def create_app() -> FastAPI:
     @app.get("/api/session/{session_id}/export.xhtml")
     def export_xhtml(session_id: str) -> PlainTextResponse:
         session = get_session(session_id)
-        content = session.exporter.xhtml_document(
-            session.editor.document.root, language=session.language
+        content = session.exporter.xhtml_document_lines(
+            session.editor.document.lines, language=session.language
         )
         return _download(content, "document.xhtml", "application/xhtml+xml")
 
@@ -159,8 +171,22 @@ def create_app() -> FastAPI:
                 detail=f"no braille source for language {session.language!r}",
             )
         # Unicode braille (U+2800…), the modern portable form.
-        content = session.transcriber.unicode(session.editor.document.root) + "\n"
-        return _download(content, "document.brl", "text/plain; charset=utf-8")
+        return _download(session.braille() + "\n", "document.brl", "text/plain; charset=utf-8")
+
+    @app.get("/api/session/{session_id}/export.dvm")
+    def export_dvm(session_id: str) -> PlainTextResponse:
+        session = get_session(session_id)
+        content = to_dvm(session.editor.document.lines, language=session.language)
+        return _download(content, "document.dvm", "application/json; charset=utf-8")
+
+    @app.post("/api/session/{session_id}/open", response_model=View)
+    def open_dvm(session_id: str, request: OpenRequest) -> View:
+        session = get_session(session_id)
+        try:
+            document = from_dvm(request.dvm)
+        except DvmError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return view(session_id, session, session.editor.load_lines(document.lines))
 
     @app.get("/favicon.ico")
     def favicon() -> FileResponse:

@@ -16,6 +16,8 @@
     { "id": "button_export_xhtml", "text": "Export XHTML" },
     { "id": "button_export_braille", "text": "Export braille (Unicode)" },
     { "id": "button_import", "text": "Import XHTML" },
+    { "id": "button_open_dvm", "text": "Open (.dvm)" },
+    { "id": "button_save_dvm", "text": "Save (.dvm)" },
     {
       "id": "help_intro",
       "text": "Type numbers and operators. Control F fraction, Control R square root, Control P power, Tab next blank, arrow keys to move, Control Enter to calculate, Control Shift L to read the line."
@@ -36,6 +38,8 @@
     { "id": "menu_view", "text": "&View" },
     { "id": "menu_help", "text": "&Help" },
     { "id": "menu_new", "text": "&New" },
+    { "id": "menu_open", "text": "&Open…" },
+    { "id": "menu_save", "text": "&Save…" },
     { "id": "menu_import_xhtml", "text": "&Import XHTML…" },
     { "id": "menu_export_xhtml", "text": "&Export as XHTML…" },
     { "id": "menu_export_braille", "text": "Export as &braille (Unicode)…" },
@@ -49,11 +53,15 @@
     { "id": "menu_read_line", "text": "&Read line" },
     { "id": "menu_braille_window", "text": "&Braille window" },
     { "id": "menu_about", "text": "&About" },
+    { "id": "dialog_open", "text": "Open document" },
+    { "id": "dialog_save", "text": "Save document" },
     { "id": "dialog_import", "text": "Import XHTML" },
     { "id": "dialog_export_xhtml", "text": "Export as XHTML" },
     { "id": "dialog_export_braille", "text": "Export as braille" },
+    { "id": "filter_dvm", "text": "DISVIMAT document" },
     { "id": "filter_xhtml", "text": "XHTML documents" },
     { "id": "filter_braille", "text": "Unicode braille" },
+    { "id": "error_open", "text": "Could not open" },
     { "id": "error_import", "text": "Could not import" },
     { "id": "status_exported", "text": "Exported: {path}" },
     { "id": "about_body", "text": "DISVIMAT {version}\nSpeech: {speech} · Braille: {braille}" }

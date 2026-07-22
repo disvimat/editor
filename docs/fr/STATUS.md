@@ -95,13 +95,13 @@ chimie s'ajoutent en tant que données, et non en tant que code.
 Ils ne figurent pas dans la liste initiale des modules mais comptent pour
 un usage réel :
 
-1. **Pas de format de document propre.** Il n'existe ni « enregistrer » ni
-   « ouvrir » : les documents ne circulent que par import et export XHTML.
-   Un format `.dvm` conservant l'arbre, la langue et le profil est
-   nécessaire.
-2. **Un document tient sur une seule ligne.** L'arbre contient une séquence
-   d'expression ; ni paragraphes, ni lignes multiples, ni texte mêlé aux
-   mathématiques.
+1. ~~Pas de format de document propre.~~ **Fait :** le format `.dvm`
+   ([DOCUMENT.md](DOCUMENT.md)) enregistre et rouvre l'arbre exact, avec la
+   langue et le profil d'écriture. Enregistrer/Ouvrir sur bureau et web.
+2. ~~Un document tient sur une seule ligne.~~ **Fait :** les documents sont
+   désormais **multi-lignes** — `Entrée` crée une ligne, les flèches
+   passent d'une ligne à l'autre au niveau supérieur, et chaque ligne est
+   présentée, lue et braillée séparément.
 3. **Pas de module complémentaire NVDA** : la voix repose donc sur la barre
    d'état (bureau) et sur la région `aria-live` (web), au lieu de parler
    directement.
@@ -117,12 +117,12 @@ un usage réel :
 
 ## Prochaines étapes suggérées
 
-MathCAT est intégré et vérifié (`scripts/install_mathcat.py`), ce qui règle
-la question du braille. Ce qui reste, par ordre d'impact :
+Le braille/parole (MathCAT + liblouis) et la couche document (`.dvm`,
+multi-lignes) sont faits. Ce qui reste, par ordre d'impact :
 
 1. Module complémentaire NVDA pour les afficheurs braille et la voix
    directe (B3/E1) ; le module NVDA de MathCAT est la référence à suivre.
-2. Format de document propre avec enregistrement et ouverture, et documents
-   multi-lignes.
-3. Structures bidimensionnelles (A10/B7) : matrices et tableaux.
-4. Export PDF (C2) et MP3 (C4).
+2. Structures bidimensionnelles (A10/B7) : matrices et tableaux.
+3. Export PDF (C2) et MP3 (C4).
+4. Texte et mathématiques mêlés dans un document (le braille de texte de
+   liblouis couvre alors les parties en prose).

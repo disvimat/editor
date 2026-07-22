@@ -22,12 +22,25 @@ class Presenter:
         self._templates = {entry.id: entry.template for entry in glyphs.entries if entry.template}
 
     def render(self, document: Document) -> tuple[str, int]:
-        """The full linear text and the cursor offset inside it."""
-        text, position = self._sequence(
-            document.root, document.cursor_path(), document.cursor_index()
-        )
-        assert position is not None, "the cursor did not show up during rendering"
-        return text, position
+        """The full multi-line text and the global cursor offset in it.
+
+        Lines are joined with ``\\n``; the caret offset counts those
+        separators so the interface can place it in a multi-line control.
+        """
+        rendered: list[str] = []
+        position: int | None = None
+        offset = 0
+        for number, line in enumerate(document.lines):
+            if number == document.cursor_line():
+                text, inner = self._sequence(line, document.cursor_path(), document.cursor_index())
+                assert inner is not None, "the cursor did not show up during rendering"
+                position = offset + inner
+            else:
+                text = self.text(line)
+            rendered.append(text)
+            offset += len(text) + 1  # + 1 for the newline separator
+        assert position is not None
+        return "\n".join(rendered), position
 
     def glyph(self, element_id: str) -> str:
         return self._glyphs.get(element_id, "?")

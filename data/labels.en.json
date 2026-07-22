@@ -53,6 +53,7 @@
     { "id": "next_slot", "label": "next blank" },
     { "id": "delete", "label": "delete" },
     { "id": "backspace", "label": "backspace" },
+    { "id": "new_line", "label": "new line" },
     { "id": "undo", "label": "undo" },
     { "id": "redo", "label": "redo" },
     { "id": "read_element", "label": "read element" },

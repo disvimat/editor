@@ -93,12 +93,13 @@ añaden como datos, no como código.
 
 No están en la lista original de módulos, pero importan para el uso real:
 
-1. **No hay formato de documento propio.** No existe "guardar" / "abrir":
-   los documentos viajan solo por importación y exportación XHTML. Hace
-   falta un formato `.dvm` que conserve el árbol, el idioma y el perfil.
-2. **Un documento es una sola línea.** El árbol contiene una secuencia de
-   expresión; no hay párrafos, varias líneas ni texto mezclado con
-   matemáticas.
+1. ~~No hay formato de documento propio.~~ **Hecho:** el formato `.dvm`
+   ([DOCUMENT.md](DOCUMENT.md)) guarda y reabre el árbol exacto, con el
+   idioma y el perfil con que se escribió. Guardar/Abrir en escritorio y web.
+2. ~~Un documento es una sola línea.~~ **Hecho:** los documentos son ahora
+   **multilínea** — `Intro` crea línea, las flechas se mueven entre líneas
+   en el nivel superior, y cada línea se presenta, se lee y se transcribe
+   por separado.
 3. **No hay add-on de NVDA**, así que la voz depende de la línea de estado
    (escritorio) y de la región `aria-live` (web), en vez de hablar
    directamente.
@@ -113,12 +114,12 @@ No están en la lista original de módulos, pero importan para el uso real:
 
 ## Próximos pasos sugeridos
 
-MathCAT está integrado y verificado (`scripts/install_mathcat.py`), lo que
-zanja la cuestión del braille. Lo que queda, por orden de impacto:
+El braille/voz (MathCAT + liblouis) y la capa de documento (`.dvm`,
+multilínea) están hechos. Lo que queda, por orden de impacto:
 
 1. Add-on de NVDA para líneas braille y voz directa (B3/E1); el propio
    add-on de MathCAT es la implementación de referencia a seguir.
-2. Formato de documento propio con guardar y abrir, y documentos de varias
-   líneas.
-3. Estructuras bidimensionales (A10/B7): matrices y tablas.
-4. Exportación a PDF (C2) y MP3 (C4).
+2. Estructuras bidimensionales (A10/B7): matrices y tablas.
+3. Exportación a PDF (C2) y MP3 (C4).
+4. Texto y matemáticas mezclados en un documento (entonces el braille de
+   texto de liblouis cubre las partes de prosa).

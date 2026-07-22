@@ -53,6 +53,7 @@
     { "id": "next_slot", "label": "siguiente hueco" },
     { "id": "delete", "label": "borrar" },
     { "id": "backspace", "label": "borrar hacia atrás" },
+    { "id": "new_line", "label": "nueva línea" },
     { "id": "undo", "label": "deshacer" },
     { "id": "redo", "label": "rehacer" },
     { "id": "read_element", "label": "leer elemento" },

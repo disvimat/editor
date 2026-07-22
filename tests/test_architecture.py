@@ -9,7 +9,7 @@ _CODE = (
     "import disvimat.core.document, disvimat.core.editor, disvimat.core.keyboard; "
     "import disvimat.core.presentation, disvimat.core.speech, disvimat.core.calculator; "
     "import disvimat.core.filters.mathml, disvimat.export.xhtml; "
-    "import disvimat.core.transcription.braille, disvimat.core.ui_text; "
+    "import disvimat.core.transcription.braille, disvimat.core.ui_text, disvimat.core.dvm; "
     "forbidden = sorted({m.split('.')[0] for m in sys.modules} "
     "& {'wx', 'fastapi', 'flask', 'PySide6', 'PyQt6', 'tkinter'}); "
     "print(forbidden); "
