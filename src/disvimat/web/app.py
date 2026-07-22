@@ -150,16 +150,17 @@ def create_app() -> FastAPI:
         )
         return _download(content, "document.xhtml", "application/xhtml+xml")
 
-    @app.get("/api/session/{session_id}/export.bra")
-    def export_bra(session_id: str) -> PlainTextResponse:
+    @app.get("/api/session/{session_id}/export.brl")
+    def export_braille(session_id: str) -> PlainTextResponse:
         session = get_session(session_id)
         if session.transcriber is None:
             raise HTTPException(
                 status_code=409,
-                detail=f"no braille tables for language {session.language!r}",
+                detail=f"no braille source for language {session.language!r}",
             )
-        content = session.transcriber.ascii(session.editor.document.root) + "\n"
-        return _download(content, "document.bra", "text/plain")
+        # Unicode braille (U+2800…), the modern portable form.
+        content = session.transcriber.unicode(session.editor.document.root) + "\n"
+        return _download(content, "document.brl", "text/plain; charset=utf-8")
 
     @app.get("/favicon.ico")
     def favicon() -> FileResponse:

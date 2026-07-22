@@ -119,8 +119,8 @@ document.getElementById("btn-export-xhtml").addEventListener("click", () => {
   window.open(`/api/session/${session}/export.xhtml`, "_blank", "noopener");
 });
 
-document.getElementById("btn-export-bra").addEventListener("click", () => {
-  window.open(`/api/session/${session}/export.bra`, "_blank", "noopener");
+document.getElementById("btn-export-braille").addEventListener("click", () => {
+  window.open(`/api/session/${session}/export.brl`, "_blank", "noopener");
 });
 
 document.getElementById("file").addEventListener("change", async (event) => {

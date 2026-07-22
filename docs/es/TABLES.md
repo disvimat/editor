@@ -79,7 +79,7 @@ braille.
 > **Importante.** Los valores actuales de `br6.es.json` son
 > **provisionales** y deben revisarse contra la signografía matemática de
 > la CBE (Comisión Braille Española) antes de usarse en el aula. La
-> codificación ASCII de la exportación `.BRA` es igualmente la NABCC
+> exportación braille es Unicode (U+2800…, `.brl`).
 > provisional.
 
 ## Cómo se describen las estructuras

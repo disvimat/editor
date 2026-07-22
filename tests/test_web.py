@@ -87,17 +87,17 @@ def test_import_and_export(client: TestClient) -> None:
     assert view["text"] == "1+2"
 
 
-def test_bra_export_needs_braille_tables(client: TestClient) -> None:
+def test_braille_export_is_unicode(client: TestClient) -> None:
     spanish = new_session(client, language="es")
     send(client, spanish, "1", "1")
-    bra = client.get(f"/api/session/{spanish}/export.bra")
-    assert bra.status_code == 200
-    assert bra.text.strip() == "#a"
+    brl = client.get(f"/api/session/{spanish}/export.brl")
+    assert brl.status_code == 200
+    assert brl.text.strip() == "⠼⠁"  # Unicode braille, not ASCII "#a"
 
     # English has no braille tables: refused instead of serving Spanish braille
     english = new_session(client, language="en")
     send(client, english, "1", "1")
-    assert client.get(f"/api/session/{english}/export.bra").status_code == 409
+    assert client.get(f"/api/session/{english}/export.brl").status_code == 409
 
 
 def test_unknown_session_gives_404(client: TestClient) -> None:

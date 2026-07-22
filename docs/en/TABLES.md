@@ -79,7 +79,7 @@ braille features.
 > **Important.** The current values of `br6.es.json` are **provisional**
 > and must be reviewed against the CBE (Comisión Braille Española)
 > mathematical braille standard before classroom use. The ASCII encoding of
-> the `.BRA` export is likewise the provisional NABCC one.
+> the braille export is Unicode (U+2800…, `.brl`).
 
 ## How structures are described
 

@@ -12,7 +12,7 @@ Legend: **done** · **partial** — usable but incomplete · **pending** — not
 The editor is usable today for **linear arithmetic and elementary algebra**,
 on the **desktop** (wxPython + NVDA) and on the **web** (FastAPI + native
 MathML), with speech in English, Spanish and French, six-dot braille in
-Spanish, XHTML import/export, .BRA export and an exact-arithmetic
+Spanish, XHTML import/export, Unicode braille export and an exact-arithmetic
 calculator with a teacher's lock.
 
 The two largest gaps are the **NVDA add-on** (braille displays and direct
@@ -55,7 +55,7 @@ tables, modules A10/B7).
 |---|---|---|
 | C1 XHTML | **done** | MathML that browsers render and screen readers speak |
 | C2 PDF | **pending** | Planned via WeasyPrint, reusing the XHTML export |
-| C3 BRA (six-dot braille) | **partial** | Works; depends on the braille table review, and the ASCII encoding is the provisional NABCC one |
+| C3 braille export | **done** | Exports Unicode braille (U+2800…, `.brl`, UTF-8) from whichever engine is active (MathCAT / liblouis / tables). ASCII conversion is still available in code but is no longer the export format |
 | C4 MP3 | **pending** | |
 
 ## D) Import modules

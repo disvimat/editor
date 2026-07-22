@@ -57,7 +57,7 @@ Full guide, in three languages:
 The values in `br6.es.json` are **provisional** and must be reviewed
 against the CBE (Comisión Braille Española) mathematical braille standard
 before classroom use; fixing them is editing this JSON, with no code
-changes. The `.BRA` export currently uses the NABCC ASCII encoding, also
+changes. The braille export is Unicode (U+2800…, `.brl`); an ASCII conversion also
 provisional (see `src/disvimat/core/transcription/braille.py`).
 
 Braille tables **never fall back** to another language: mathematical

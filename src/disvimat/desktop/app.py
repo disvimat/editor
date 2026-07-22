@@ -81,11 +81,21 @@ class BrailleWindow(wx.Frame):
 class EditorWindow(wx.Frame):
     """The accessible linear editor window."""
 
-    def __init__(self, editor: Editor, transcriber: BrailleProvider | None, text: UIText) -> None:
+    def __init__(
+        self,
+        editor: Editor,
+        transcriber: BrailleProvider | None,
+        text: UIText,
+        *,
+        speech_backend: str = "tables",
+        braille_backend: str = "none",
+    ) -> None:
         super().__init__(None, title=text("app_title"))
         self._editor = editor
         self._transcriber = transcriber
         self._text = text
+        self._speech_backend = speech_backend
+        self._braille_backend = braille_backend
         self._braille: BrailleWindow | None = None
         panel = wx.Panel(self)
         self._document = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY)
@@ -136,27 +146,81 @@ class EditorWindow(wx.Frame):
 
     def _build_menu(self) -> None:
         text = self._text
+        bar = wx.MenuBar()
+
         file_menu = wx.Menu()
+        new_item = file_menu.Append(wx.ID_NEW, text("menu_new") + "\tCtrl+N")
         import_item = file_menu.Append(wx.ID_OPEN, text("menu_import_xhtml") + "\tCtrl+I")
         export_item = file_menu.Append(wx.ID_SAVEAS, text("menu_export_xhtml") + "\tCtrl+E")
-        export_bra = file_menu.Append(wx.ID_ANY, text("menu_export_bra"))
+        export_braille = file_menu.Append(wx.ID_ANY, text("menu_export_braille"))
         file_menu.AppendSeparator()
         quit_item = file_menu.Append(wx.ID_EXIT, text("menu_quit"))
-        view_menu = wx.Menu()
-        braille_item = view_menu.Append(wx.ID_ANY, text("menu_braille_window") + "\tCtrl+6")
-        bar = wx.MenuBar()
         bar.Append(file_menu, text("menu_file"))
-        bar.Append(view_menu, text("menu_view"))
-        self.SetMenuBar(bar)
+        self.Bind(wx.EVT_MENU, self._new, new_item)
         self.Bind(wx.EVT_MENU, self._import, import_item)
         self.Bind(wx.EVT_MENU, self._export_xhtml, export_item)
-        self.Bind(wx.EVT_MENU, self._export_bra, export_bra)
-        self.Bind(wx.EVT_MENU, self._toggle_braille, braille_item)
+        self.Bind(wx.EVT_MENU, self._export_braille, export_braille)
         self.Bind(wx.EVT_MENU, lambda _event: self.Close(), quit_item)
+
+        # Edit, Insert and Tools items all run an editor command by its
+        # canonical key stroke, so the menus and the shortcuts never diverge.
+        edit_menu = wx.Menu()
+        self._add_command(edit_menu, "menu_undo", "Ctrl+Z")
+        self._add_command(edit_menu, "menu_redo", "Ctrl+Y")
+        bar.Append(edit_menu, text("menu_edit"))
+
+        insert_menu = wx.Menu()
+        self._add_command(insert_menu, "menu_insert_fraction", "Ctrl+F")
+        self._add_command(insert_menu, "menu_insert_sqrt", "Ctrl+R")
+        self._add_command(insert_menu, "menu_insert_power", "Ctrl+P")
+        bar.Append(insert_menu, text("menu_insert"))
+
+        tools_menu = wx.Menu()
+        self._add_command(tools_menu, "menu_calculate", "Ctrl+Return")
+        self._add_command(tools_menu, "menu_read_line", "Ctrl+Shift+L")
+        bar.Append(tools_menu, text("menu_tools"))
+
+        view_menu = wx.Menu()
+        braille_item = view_menu.Append(wx.ID_ANY, text("menu_braille_window") + "\tCtrl+6")
+        bar.Append(view_menu, text("menu_view"))
+        self.Bind(wx.EVT_MENU, self._toggle_braille, braille_item)
+
+        help_menu = wx.Menu()
+        about_item = help_menu.Append(wx.ID_ABOUT, text("menu_about"))
+        bar.Append(help_menu, text("menu_help"))
+        self.Bind(wx.EVT_MENU, self._about, about_item)
+
+        self.SetMenuBar(bar)
         if self._transcriber is None:
-            # No braille tables for this language: the features stay disabled.
-            export_bra.Enable(False)
+            # No braille source for this language: the features stay disabled.
+            export_braille.Enable(False)
             braille_item.Enable(False)
+
+    def _add_command(self, menu: wx.Menu, label_id: str, keys: str) -> None:
+        """Add a menu item that runs the editor command bound to ``keys``."""
+        item = menu.Append(wx.ID_ANY, self._text(label_id) + f"\t{keys}")
+        self.Bind(wx.EVT_MENU, lambda _event, k=keys: self._run(k), item)
+
+    def _run(self, keys: str) -> None:
+        result = self._editor.press(keys)
+        if result is not None:
+            self._apply(result)
+        self._document.SetFocus()
+
+    def _new(self, _event: wx.CommandEvent) -> None:
+        self._apply(self._editor.load([]))
+        self._document.SetFocus()
+
+    def _about(self, _event: wx.CommandEvent) -> None:
+        from disvimat import __version__
+
+        body = self._text(
+            "about_body",
+            version=__version__,
+            speech=self._speech_backend,
+            braille=self._braille_backend,
+        )
+        wx.MessageBox(body, self._text("menu_about"), wx.ICON_INFORMATION)
 
     def _import(self, _event: wx.CommandEvent) -> None:
         text = self._text
@@ -195,21 +259,22 @@ class EditorWindow(wx.Frame):
             handle.write(content)
         self.SetStatusText(text("status_exported", path=path))
 
-    def _export_bra(self, _event: wx.CommandEvent) -> None:
+    def _export_braille(self, _event: wx.CommandEvent) -> None:
         if self._transcriber is None:
             return
         text = self._text
         dialog = wx.FileDialog(
             self,
-            text("dialog_export_bra"),
-            wildcard=text("filter_bra") + " (*.bra)|*.bra",
+            text("dialog_export_braille"),
+            wildcard=text("filter_braille") + " (*.brl)|*.brl",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if dialog.ShowModal() != wx.ID_OK:
             return
         path = dialog.GetPath()
-        content = self._transcriber.ascii(self._editor.document.root)
-        with open(path, "w", encoding="ascii") as handle:
+        # Unicode braille (U+2800…), UTF-8: the modern, portable form.
+        content = self._transcriber.unicode(self._editor.document.root)
+        with open(path, "w", encoding="utf-8") as handle:
             handle.write(content + "\n")
         self.SetStatusText(text("status_exported", path=path))
 
@@ -236,6 +301,8 @@ def main() -> None:
         create_editor(language=language, profile=profile, reader=outputs.reader),
         outputs.braille,
         UIText.load(language=language),
+        speech_backend=outputs.speech_backend,
+        braille_backend=outputs.braille_backend,
     )
     window.Show()
     app.MainLoop()
