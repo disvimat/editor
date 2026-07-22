@@ -62,13 +62,14 @@ Branch workflow: work happens on a topic branch, is merged into `dev` for
 testing (continuous integration plus manual NVDA checks), and only reaches
 `main` once validated.
 
-> **Braille notice.** Our own braille engine is complete, but the Spanish
-> cell values are **provisional**. The project integrates
-> [MathCAT](docs/en/MATHCAT.md) (DAISY), which implements the normative CMU
-> code; once its binding is built, MathCAT provides the braille and our
-> tables become the fallback. Braille never falls back across languages:
-> a language with no braille source has its braille features disabled
-> rather than showing another country's braille.
+> **Braille and speech.** The project integrates
+> [MathCAT](docs/en/MATHCAT.md) (DAISY), which reads whole expressions
+> aloud and produces normative braille (CMU for Spanish, UEB for English).
+> Install it with `python scripts/install_mathcat.py`; without it the
+> editor falls back to its own tables (whose Spanish braille values are
+> provisional). Braille never falls back across languages: a language with
+> no braille source has its braille features disabled rather than showing
+> another country's braille.
 
 ## Licence
 

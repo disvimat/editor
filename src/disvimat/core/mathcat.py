@@ -22,6 +22,7 @@ module therefore never imports it at module load time; everything degrades
 to the table-driven engines when the library is absent.
 """
 
+import os
 from collections.abc import Callable, Sequence
 from importlib import import_module
 from pathlib import Path
@@ -34,9 +35,11 @@ from disvimat.core.transcription.braille import unicode_to_ascii
 #: preference. The NVDA add-on ships it as ``libmathcat_py``.
 MODULE_NAMES: tuple[str, ...] = ("libmathcat_py", "libmathcat")
 
-#: Languages MathCAT speaks. Anything else falls back to our label tables;
-#: French is notably absent.
-SPEECH_LANGUAGES = frozenset({"en", "de", "es", "fi", "id", "no", "sv", "vi", "zh"})
+#: Languages MathCAT speaks (its ``Rules/Languages`` directories). Anything
+#: else falls back to our label tables. French *is* present, but its rules
+#: are incomplete (they still fall back to English for many expressions),
+#: so we keep French on our own tables for now — see ``docs/*/MATHCAT.md``.
+SPEECH_LANGUAGES = frozenset({"en", "de", "es", "fi", "id", "nb", "ru", "sv", "vi", "zh"})
 
 #: Braille code to request per language. Only mappings we are confident
 #: about are listed; an unlisted language keeps the table transcriber.
@@ -47,6 +50,9 @@ BRAILLE_CODES: dict[str, str] = {
 
 #: Default speech style; MathCAT also offers "SimpleSpeak" and "MathSpeak".
 DEFAULT_SPEECH_STYLE = "ClearSpeak"
+
+#: Environment variable pointing at MathCAT's ``Rules`` directory.
+RULES_DIR_ENV = "MATHCAT_RULES_DIR"
 
 
 class MathCATUnavailable(RuntimeError):
@@ -75,13 +81,36 @@ def load_library(module_names: Sequence[str] = MODULE_NAMES) -> _Library:
     )
 
 
+def find_rules_dir(module_names: Sequence[str] = MODULE_NAMES) -> Path | None:
+    """Locate MathCAT's ``Rules`` directory.
+
+    MathCAT keeps its speech and braille rules in an external ``Rules``
+    directory, and :meth:`SetRulesDir` must be its first call. We look, in
+    order, at the ``MATHCAT_RULES_DIR`` environment variable and at a
+    ``Rules`` folder next to the imported binding.
+    """
+    from_environment = os.environ.get(RULES_DIR_ENV)
+    if from_environment and Path(from_environment).is_dir():
+        return Path(from_environment)
+    try:
+        library = load_library(module_names)
+    except MathCATUnavailable:
+        return None
+    module_file = getattr(library, "__file__", None)
+    if module_file:
+        candidate = Path(module_file).resolve().parent / "Rules"
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def is_available(module_names: Sequence[str] = MODULE_NAMES) -> bool:
-    """Whether the MathCAT binding can be imported."""
+    """Whether the binding can be imported and its rules can be located."""
     try:
         load_library(module_names)
     except MathCATUnavailable:
         return False
-    return True
+    return find_rules_dir(module_names) is not None
 
 
 class MathCATBackend:
@@ -107,8 +136,14 @@ class MathCATBackend:
         self.language = language
         self.braille_code = braille_code or BRAILLE_CODES.get(language)
         self._library: _Library = library if library is not None else load_library()
-        if rules_dir is not None:
-            self._library.SetRulesDir(str(rules_dir))
+        # SetRulesDir MUST be the first call (besides GetVersion): the rules
+        # define which preferences and languages exist. Without them every
+        # SetPreference raises, so a missing rules directory means MathCAT is
+        # unavailable and the caller falls back to the tables.
+        rules = rules_dir or find_rules_dir()
+        if rules is None:
+            raise MathCATUnavailable("MathCAT rules directory not found")
+        self._library.SetRulesDir(str(rules))
         self._library.SetPreference("Language", language)
         self._library.SetPreference("SpeechStyle", speech_style)
         if self.braille_code:

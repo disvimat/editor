@@ -37,60 +37,68 @@ are needed and they come from different places.
   an editing cursor that inserts and deletes. The two models are different,
   so MathCAT navigation is not used for editing.
 
-## Current state
+## Installing it
 
-The **seam is implemented and tested**; the **binding is not built yet**.
+MathCAT is **not on PyPI**, but the project publishes prebuilt binaries
+(built with PyO3 abi3, so one build serves every Python 3.x). For 64-bit
+Python on Windows or Linux there is a one-command installer:
 
-- [`core/mathcat.py`](../../src/disvimat/core/mathcat.py) — the adapter:
-  sets `Language`, `SpeechStyle` and `BrailleCode`, hands over our MathML
-  and returns speech and braille.
-- [`backends.py`](../../src/disvimat/backends.py) — the policy: MathCAT
-  leads, tables are the fallback.
-- [`tests/test_mathcat.py`](../../tests/test_mathcat.py) — drives the
-  adapter with a fake library, so everything on our side of the boundary is
-  verified.
+```bash
+python scripts/install_mathcat.py
+```
 
-Because MathCAT is absent today, the application runs exactly as before on
-our tables. Installing the binding is enough to switch it over; no code
-changes are needed.
+It downloads the matching `libmathcat_py` binary and MathCAT's `Rules`
+directory into `site-packages`, then verifies the install. After that the
+editor uses MathCAT automatically — no code or configuration changes.
 
-## Building the Python binding
-
-MathCAT is **not published on PyPI**, and the binary shipped with the NVDA
-add-on is built for 32-bit Python 3.11 (NVDA's interpreter), so it cannot
-be imported by an ordinary 64-bit Python. The binding has to be built:
-
-1. Install the [Rust toolchain](https://rustup.rs/).
-2. Clone [daisy/MathCATForPython](https://github.com/daisy/MathCATForPython)
-   and build it for your Python version and architecture (it is a PyO3
-   project; follow the build instructions in that repository).
-3. Put the resulting module (`libmathcat_py`) on the Python path of the
-   environment running DISVIMAT.
-4. Make the **Rules** directory available. MathCAT looks for it in the path
-   given to `SetRulesDir`, then in the `MathCATRulesDir` environment
-   variable, then next to the binary. Our adapter accepts a `rules_dir`
-   argument for the first option.
-
-Verify it with:
+Verify by hand with:
 
 ```python
 from disvimat.core.mathcat import is_available
-print(is_available())          # True once the binding is importable
-```
+print(is_available())          # True once binding and rules are present
 
-and then:
-
-```python
 from disvimat.core.tables import Catalog, data_dir
 from disvimat.backends import create_outputs
 outputs = create_outputs(Catalog.load(data_dir() / "elements.json"), "es")
 print(outputs.speech_backend, outputs.braille_backend)   # -> mathcat mathcat
 ```
 
-Two details to confirm on a real build, because they could not be tested
-without the library: the exact module name (we try `libmathcat_py` then
-`libmathcat`) and the braille code strings (`"CMU"`, `"UEB"`). Both are
-single constants at the top of `core/mathcat.py`.
+For a platform with no prebuilt binary (e.g. 32-bit, or a Python the
+release does not cover), build from source: install the
+[Rust toolchain](https://rustup.rs/), clone
+[daisy/MathCATForPython](https://github.com/daisy/MathCATForPython) and
+build it (a PyO3 project), then place `libmathcat_py` and a `Rules`
+directory on the Python path.
+
+## How it is wired
+
+- [`core/mathcat.py`](../../src/disvimat/core/mathcat.py) — the adapter.
+  `SetRulesDir` is called **first** (MathCAT requires it before any
+  preference), then `Language`, `SpeechStyle` and `BrailleCode`; it locates
+  the rules via the `MATHCAT_RULES_DIR` variable or a `Rules` folder next
+  to the binding.
+- [`backends.py`](../../src/disvimat/backends.py) — the policy: MathCAT
+  leads, tables are the fallback. Set `DISVIMAT_NO_MATHCAT=1` to force the
+  tables even when MathCAT is installed (the test suite does this so results
+  do not depend on whether MathCAT is present).
+- [`tests/test_mathcat.py`](../../tests/test_mathcat.py) — drives the
+  adapter with a fake library, so the boundary is covered without needing
+  the real binding.
+
+## Things to know
+
+- **Verified working** on 64-bit Python 3.13 (Windows): Spanish reads
+  "1 más 2 tercios" and produces CMU braille; English uses UEB. When
+  MathCAT is absent the editor runs on our tables exactly as before.
+- **French.** MathCAT ships French *rules*, but they are incomplete (they
+  fall back to English for many expressions), so we keep French on our own
+  tables for now. When the French rules mature, adding `"fr"` to
+  `SPEECH_LANGUAGES` is the only change needed.
+- **Global singleton.** The MathCAT binding holds one global configuration
+  per process. That is fine for the desktop (one language per run). On the
+  web, concurrent sessions in *different* languages could interfere; a
+  single-language deployment avoids it. A per-process lock or worker
+  affinity is the fix if multi-language web use becomes important.
 
 ## Braille policy
 

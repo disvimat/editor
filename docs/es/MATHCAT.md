@@ -36,63 +36,70 @@ vienen de sitios distintos.
   necesita un cursor que inserta y borra. Son modelos distintos, así que su
   navegación no se usa para editar.
 
-## Estado actual
+## Cómo instalarlo
 
-La **costura está implementada y probada**; el **binario todavía no está
-compilado**.
+MathCAT **no está en PyPI**, pero el proyecto publica binarios
+precompilados (con PyO3 abi3, así que una compilación sirve para cualquier
+Python 3.x). Para Python de 64 bits en Windows o Linux hay un instalador de
+una sola orden:
 
-- [`core/mathcat.py`](../../src/disvimat/core/mathcat.py) — el adaptador:
-  fija `Language`, `SpeechStyle` y `BrailleCode`, entrega nuestro MathML y
-  devuelve voz y braille.
-- [`backends.py`](../../src/disvimat/backends.py) — la política: MathCAT
-  manda, las tablas son la reserva.
-- [`tests/test_mathcat.py`](../../tests/test_mathcat.py) — ejercita el
-  adaptador con una biblioteca falsa, de modo que todo lo que está de
-  nuestro lado de la frontera queda verificado.
+```bash
+python scripts/install_mathcat.py
+```
 
-Como MathCAT hoy no está, la aplicación funciona igual que antes sobre
-nuestras tablas. Basta con instalar el binario para que cambie de motor:
-no hay que tocar código.
+Descarga el binario `libmathcat_py` que corresponde y el directorio
+`Rules` de MathCAT a `site-packages`, y verifica la instalación. Después,
+el editor usa MathCAT automáticamente, sin tocar código ni configuración.
 
-## Compilar el enlace Python
-
-MathCAT **no está publicado en PyPI**, y el binario que acompaña al add-on
-de NVDA está compilado para Python 3.11 de 32 bits (el intérprete de NVDA),
-así que no puede importarse desde un Python normal de 64 bits. Hay que
-compilarlo:
-
-1. Instalar el [toolchain de Rust](https://rustup.rs/).
-2. Clonar [daisy/MathCATForPython](https://github.com/daisy/MathCATForPython)
-   y compilarlo para su versión y arquitectura de Python (es un proyecto
-   PyO3; siga las instrucciones de compilación de ese repositorio).
-3. Dejar el módulo resultante (`libmathcat_py`) en la ruta de Python del
-   entorno donde corre DISVIMAT.
-4. Poner a disposición el directorio **Rules**. MathCAT lo busca en la ruta
-   dada a `SetRulesDir`, luego en la variable de entorno
-   `MathCATRulesDir`, y por último junto al binario. Nuestro adaptador
-   acepta un argumento `rules_dir` para la primera opción.
-
-Compruébelo con:
+Compruébelo a mano con:
 
 ```python
 from disvimat.core.mathcat import is_available
-print(is_available())          # True cuando el enlace se puede importar
-```
+print(is_available())          # True cuando el enlace y las reglas están
 
-y después:
-
-```python
 from disvimat.core.tables import Catalog, data_dir
 from disvimat.backends import create_outputs
 outputs = create_outputs(Catalog.load(data_dir() / "elements.json"), "es")
 print(outputs.speech_backend, outputs.braille_backend)   # -> mathcat mathcat
 ```
 
-Dos detalles que conviene confirmar sobre una compilación real, porque no
-se pudieron probar sin la biblioteca: el nombre exacto del módulo
-(probamos `libmathcat_py` y luego `libmathcat`) y las cadenas de los
-códigos braille (`"CMU"`, `"UEB"`). Ambos son constantes al principio de
-`core/mathcat.py`.
+Para una plataforma sin binario precompilado (por ejemplo 32 bits, o un
+Python que el release no cubra), compílelo desde el código: instale el
+[toolchain de Rust](https://rustup.rs/), clone
+[daisy/MathCATForPython](https://github.com/daisy/MathCATForPython) y
+compílelo (proyecto PyO3); luego deje `libmathcat_py` y un directorio
+`Rules` en la ruta de Python.
+
+## Cómo está cableado
+
+- [`core/mathcat.py`](../../src/disvimat/core/mathcat.py) — el adaptador.
+  `SetRulesDir` se llama **primero** (MathCAT lo exige antes de cualquier
+  preferencia), y luego `Language`, `SpeechStyle` y `BrailleCode`; localiza
+  las reglas con la variable `MATHCAT_RULES_DIR` o una carpeta `Rules`
+  junto al enlace.
+- [`backends.py`](../../src/disvimat/backends.py) — la política: MathCAT
+  manda, las tablas son la reserva. Con `DISVIMAT_NO_MATHCAT=1` se fuerzan
+  las tablas aunque MathCAT esté instalado (la batería de tests lo hace,
+  para que los resultados no dependan de si MathCAT está presente).
+- [`tests/test_mathcat.py`](../../tests/test_mathcat.py) — ejercita el
+  adaptador con una biblioteca falsa, cubriendo la frontera sin necesitar
+  el enlace real.
+
+## Cosas que conviene saber
+
+- **Verificado y funcionando** en Python 3.13 de 64 bits (Windows): el
+  español lee "1 más 2 tercios" y produce braille CMU; el inglés usa UEB.
+  Cuando MathCAT no está, el editor funciona sobre nuestras tablas igual
+  que antes.
+- **Francés.** MathCAT trae *reglas* de francés, pero incompletas (recurren
+  al inglés en muchas expresiones), así que de momento mantenemos el
+  francés en nuestras tablas. Cuando esas reglas maduren, añadir `"fr"` a
+  `SPEECH_LANGUAGES` es el único cambio necesario.
+- **Singleton global.** El enlace de MathCAT guarda una única configuración
+  por proceso. Es correcto en escritorio (un idioma por ejecución). En web,
+  sesiones concurrentes en *idiomas distintos* podrían interferir; un
+  despliegue de un solo idioma lo evita. Un bloqueo por proceso o afinidad
+  de trabajador es la solución si el uso web multilingüe llega a importar.
 
 ## Política braille
 
