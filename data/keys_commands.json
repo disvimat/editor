@@ -12,6 +12,7 @@
     { "id": "next_slot", "keys": "Tab" },
     { "id": "delete", "keys": "Delete" },
     { "id": "backspace", "keys": "Backspace" },
+    { "id": "new_line", "keys": "Return" },
     { "id": "undo", "keys": "Ctrl+Z" },
     { "id": "redo", "keys": "Ctrl+Y" },
     { "id": "read_element", "keys": "Ctrl+L" },

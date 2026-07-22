@@ -93,11 +93,12 @@ data rather than as code.
 
 These are not in the original module list but matter for real use:
 
-1. **No native document format.** There is no "save" / "open": documents
-   travel through XHTML import and export only. A `.dvm` format that keeps
-   the tree, the language and the profile is needed.
-2. **A document is a single line.** The tree holds one expression sequence;
-   there are no paragraphs, several lines or mixed text and mathematics.
+1. ~~No native document format.~~ **Done:** the `.dvm` format
+   ([DOCUMENT.md](DOCUMENT.md)) saves and reopens the exact tree, with the
+   language and profile it was written for. Save/Open on desktop and web.
+2. ~~A document is a single line.~~ **Done:** documents are now
+   **multi-line** — `Return` starts a line, arrow keys move between lines at
+   the top level, and each line renders, speaks and brailles on its own.
 3. **No NVDA add-on**, so speech relies on the status line (desktop) and on
    the `aria-live` region (web), instead of speaking directly.
 4. **Web sessions live in memory** and disappear when the process restarts;
@@ -111,11 +112,12 @@ These are not in the original module list but matter for real use:
 
 ## Suggested next steps
 
-MathCAT is integrated and verified (`scripts/install_mathcat.py`), which
-settles the braille question. What remains, in order of impact:
+Braille/speech (MathCAT + liblouis) and the document layer (`.dvm`,
+multi-line) are done. What remains, in order of impact:
 
 1. NVDA add-on for braille displays and direct speech (B3/E1) — MathCAT's
    own NVDA add-on is the reference implementation to follow.
-2. Native document format with save and open, plus multi-line documents.
-3. Two-dimensional structures (A10/B7): matrices and tables.
-4. PDF (C2) and MP3 (C4) export.
+2. Two-dimensional structures (A10/B7): matrices and tables.
+3. PDF (C2) and MP3 (C4) export.
+4. Mixed text + mathematics in a document (liblouis text braille then
+   covers the prose parts).

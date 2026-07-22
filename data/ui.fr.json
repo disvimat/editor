@@ -16,6 +16,8 @@
     { "id": "button_export_xhtml", "text": "Exporter en XHTML" },
     { "id": "button_export_braille", "text": "Exporter en braille (Unicode)" },
     { "id": "button_import", "text": "Importer un XHTML" },
+    { "id": "button_open_dvm", "text": "Ouvrir (.dvm)" },
+    { "id": "button_save_dvm", "text": "Enregistrer (.dvm)" },
     {
       "id": "help_intro",
       "text": "Saisissez des nombres et des opérateurs. Contrôle F fraction, Contrôle R racine carrée, Contrôle P puissance, Tabulation case suivante, flèches pour se déplacer, Contrôle Entrée pour calculer, Contrôle Majuscule L pour lire la ligne."
@@ -36,6 +38,8 @@
     { "id": "menu_view", "text": "&Affichage" },
     { "id": "menu_help", "text": "&Aide" },
     { "id": "menu_new", "text": "&Nouveau" },
+    { "id": "menu_open", "text": "&Ouvrir…" },
+    { "id": "menu_save", "text": "&Enregistrer…" },
     { "id": "menu_import_xhtml", "text": "&Importer un XHTML…" },
     { "id": "menu_export_xhtml", "text": "&Exporter en XHTML…" },
     { "id": "menu_export_braille", "text": "Exporter en &braille (Unicode)…" },
@@ -49,11 +53,15 @@
     { "id": "menu_read_line", "text": "&Lire la ligne" },
     { "id": "menu_braille_window", "text": "Fenêtre &braille" },
     { "id": "menu_about", "text": "À &propos" },
+    { "id": "dialog_open", "text": "Ouvrir un document" },
+    { "id": "dialog_save", "text": "Enregistrer le document" },
     { "id": "dialog_import", "text": "Importer un XHTML" },
     { "id": "dialog_export_xhtml", "text": "Exporter en XHTML" },
     { "id": "dialog_export_braille", "text": "Exporter en braille" },
+    { "id": "filter_dvm", "text": "Document DISVIMAT" },
     { "id": "filter_xhtml", "text": "Documents XHTML" },
     { "id": "filter_braille", "text": "Braille Unicode" },
+    { "id": "error_open", "text": "Impossible d'ouvrir" },
     { "id": "error_import", "text": "Impossible d'importer" },
     { "id": "status_exported", "text": "Exporté : {path}" },
     { "id": "about_body", "text": "DISVIMAT {version}\nParole : {speech} · Braille : {braille}" }

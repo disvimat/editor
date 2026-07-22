@@ -77,6 +77,7 @@ class Editor:
             "enter_structure": self._cmd_enter,
             "exit_structure": self._cmd_exit,
             "next_slot": self._cmd_next_slot,
+            "new_line": self._cmd_new_line,
             "delete": self._cmd_delete,
             "backspace": self._cmd_backspace,
             "undo": self._cmd_undo,
@@ -115,8 +116,13 @@ class Editor:
         return self._result(self._cmd_read_line())
 
     def load(self, nodes: list[Node]) -> Result:
-        """Replace the document content (D imports); undoable."""
+        """Replace the document content with a single line (imports); undoable."""
         self.document.load(nodes)
+        return self._result(self._cmd_read_line())
+
+    def load_lines(self, lines: list[list[Node]]) -> Result:
+        """Replace the document with several lines (open .dvm); undoable."""
+        self.document.load_lines(lines)
         return self._result(self._cmd_read_line())
 
     # --- commands ------------------------------------------------------------
@@ -143,17 +149,28 @@ class Editor:
 
     def _cmd_enter(self) -> str:
         structure = self.document.enter()
-        if structure is None:
-            return self._read_current()
-        label = self._speaker.label("enter_structure")
-        return f"{label}: {self._speaker.label(structure.element_id)}"
+        if structure is not None:
+            label = self._speaker.label("enter_structure")
+            return f"{label}: {self._speaker.label(structure.element_id)}"
+        # At the top level, Down moves to the next document line.
+        if self.document.line_down():
+            return self._cmd_read_line()
+        return self._read_current()
 
     def _cmd_exit(self) -> str:
         structure = self.document.exit()
-        if structure is None:
+        if structure is not None:
+            label = self._speaker.label("exit_structure")
+            return f"{label}: {self._speaker.label(structure.element_id)}"
+        # At the top level, Up moves to the previous document line.
+        if self.document.line_up():
+            return self._cmd_read_line()
+        return self._read_current()
+
+    def _cmd_new_line(self) -> str:
+        if not self.document.new_line():
             return self._read_current()
-        label = self._speaker.label("exit_structure")
-        return f"{label}: {self._speaker.label(structure.element_id)}"
+        return self._speaker.label("new_line")
 
     def _cmd_next_slot(self) -> str:
         structure = self.document.current_structure()
@@ -167,15 +184,19 @@ class Editor:
 
     def _cmd_delete(self) -> str:
         node = self.document.delete()
-        if node is None:
-            return self._read_current()
-        return f"{self._speaker.label('delete')}: {self._speaker.node(node)}"
+        if node is not None:
+            return f"{self._speaker.label('delete')}: {self._speaker.node(node)}"
+        if self.document.merge_with_next_line():
+            return self._cmd_read_line()
+        return self._read_current()
 
     def _cmd_backspace(self) -> str:
         node = self.document.backspace()
-        if node is None:
-            return self._speaker.label("line_start")
-        return f"{self._speaker.label('backspace')}: {self._speaker.node(node)}"
+        if node is not None:
+            return f"{self._speaker.label('backspace')}: {self._speaker.node(node)}"
+        if self.document.merge_with_previous_line():
+            return self._cmd_read_line()
+        return self._speaker.label("line_start")
 
     def _cmd_undo(self) -> str:
         self.document.undo()

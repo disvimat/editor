@@ -53,6 +53,7 @@
     { "id": "next_slot", "label": "case suivante" },
     { "id": "delete", "label": "supprimer" },
     { "id": "backspace", "label": "retour arrière" },
+    { "id": "new_line", "label": "nouvelle ligne" },
     { "id": "undo", "label": "annuler" },
     { "id": "redo", "label": "rétablir" },
     { "id": "read_element", "label": "lire l'élément" },

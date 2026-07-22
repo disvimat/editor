@@ -115,6 +115,27 @@ document.getElementById("btn-calculate").addEventListener("click", () => {
   editor.focus();
 });
 
+document.getElementById("btn-save-dvm").addEventListener("click", () => {
+  window.open(`/api/session/${session}/export.dvm`, "_blank", "noopener");
+});
+
+document.getElementById("file-dvm").addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  const dvm = await file.text();
+  try {
+    paint(await request(`/api/session/${session}/open`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dvm }),
+    }));
+  } catch (e) {
+    status.textContent = e.message;
+  }
+  event.target.value = "";
+  editor.focus();
+});
+
 document.getElementById("btn-export-xhtml").addEventListener("click", () => {
   window.open(`/api/session/${session}/export.xhtml`, "_blank", "noopener");
 });

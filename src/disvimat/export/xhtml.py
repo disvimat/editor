@@ -20,7 +20,7 @@ _XHTML_TEMPLATE = """<?xml version="1.0" encoding="utf-8"?>
 <title>{title}</title>
 </head>
 <body>
-<p>{mathml}</p>
+{body}
 </body>
 </html>
 """
@@ -45,9 +45,20 @@ class XHTMLExporter:
     def xhtml_document(
         self, nodes: list[Node], title: str = "DISVIMAT document", language: str = "en"
     ) -> str:
-        """A complete XHTML document with the expression as MathML."""
-        math_text = ET.tostring(self.mathml(nodes), encoding="unicode")
-        return _XHTML_TEMPLATE.format(title=title, language=language, mathml=math_text)
+        """A complete XHTML document with one expression (a single line)."""
+        return self.xhtml_document_lines([nodes], title=title, language=language)
+
+    def xhtml_document_lines(
+        self,
+        lines: list[list[Node]],
+        title: str = "DISVIMAT document",
+        language: str = "en",
+    ) -> str:
+        """A complete XHTML document with one ``<p><math>`` per line."""
+        paragraphs = "\n".join(
+            f"<p>{ET.tostring(self.mathml(line), encoding='unicode')}</p>" for line in lines
+        )
+        return _XHTML_TEMPLATE.format(title=title, language=language, body=paragraphs)
 
     # --- internals ------------------------------------------------------------
 

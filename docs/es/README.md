@@ -9,6 +9,7 @@ maneras: en pantalla, hablada, en braille y en archivos exportables.
 
 - [Arquitectura](ARCHITECTURE.md) — cómo está construido el proyecto y por qué.
 - [Tablas](TABLES.md) — los datos que gobiernan el comportamiento del editor.
+- [Formato de documento](DOCUMENT.md) — documentos multilínea y el formato `.dvm`.
 - [Estado](STATUS.md) — qué está hecho y qué falta.
 - [MathCAT](MATHCAT.md) — el motor externo de voz y braille.
 

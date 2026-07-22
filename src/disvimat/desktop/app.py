@@ -12,6 +12,7 @@ import os
 import wx
 
 from disvimat.backends import create_outputs
+from disvimat.core.dvm import DvmError, from_dvm, to_dvm
 from disvimat.core.editor import Editor, Result, create_editor
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
 from disvimat.core.output import BrailleProvider
@@ -87,6 +88,8 @@ class EditorWindow(wx.Frame):
         transcriber: BrailleProvider | None,
         text: UIText,
         *,
+        language: str = "en",
+        profile: str | None = None,
         speech_backend: str = "tables",
         braille_backend: str = "none",
     ) -> None:
@@ -94,6 +97,8 @@ class EditorWindow(wx.Frame):
         self._editor = editor
         self._transcriber = transcriber
         self._text = text
+        self._language = language
+        self._profile = profile
         self._speech_backend = speech_backend
         self._braille_backend = braille_backend
         self._braille: BrailleWindow | None = None
@@ -140,7 +145,12 @@ class EditorWindow(wx.Frame):
         self._document.SetInsertionPoint(result.position)
         self.SetStatusText(result.speech)
         if self._braille is not None and self._braille.IsShown() and self._transcriber:
-            self._braille.show_braille(self._transcriber.unicode(self._editor.document.root))
+            self._braille.show_braille(self._braille_text())
+
+    def _braille_text(self) -> str:
+        """Braille of the whole document, one line per document line."""
+        assert self._transcriber is not None
+        return "\n".join(self._transcriber.unicode(line) for line in self._editor.document.lines)
 
     # --- menu ----------------------------------------------------------------
 
@@ -150,13 +160,18 @@ class EditorWindow(wx.Frame):
 
         file_menu = wx.Menu()
         new_item = file_menu.Append(wx.ID_NEW, text("menu_new") + "\tCtrl+N")
-        import_item = file_menu.Append(wx.ID_OPEN, text("menu_import_xhtml") + "\tCtrl+I")
-        export_item = file_menu.Append(wx.ID_SAVEAS, text("menu_export_xhtml") + "\tCtrl+E")
+        open_item = file_menu.Append(wx.ID_OPEN, text("menu_open") + "\tCtrl+O")
+        save_item = file_menu.Append(wx.ID_SAVE, text("menu_save") + "\tCtrl+S")
+        file_menu.AppendSeparator()
+        import_item = file_menu.Append(wx.ID_ANY, text("menu_import_xhtml") + "\tCtrl+I")
+        export_item = file_menu.Append(wx.ID_ANY, text("menu_export_xhtml") + "\tCtrl+E")
         export_braille = file_menu.Append(wx.ID_ANY, text("menu_export_braille"))
         file_menu.AppendSeparator()
         quit_item = file_menu.Append(wx.ID_EXIT, text("menu_quit"))
         bar.Append(file_menu, text("menu_file"))
         self.Bind(wx.EVT_MENU, self._new, new_item)
+        self.Bind(wx.EVT_MENU, self._open_dvm, open_item)
+        self.Bind(wx.EVT_MENU, self._save_dvm, save_item)
         self.Bind(wx.EVT_MENU, self._import, import_item)
         self.Bind(wx.EVT_MENU, self._export_xhtml, export_item)
         self.Bind(wx.EVT_MENU, self._export_braille, export_braille)
@@ -208,8 +223,46 @@ class EditorWindow(wx.Frame):
         self._document.SetFocus()
 
     def _new(self, _event: wx.CommandEvent) -> None:
-        self._apply(self._editor.load([]))
+        self._apply(self._editor.load_lines([[]]))
         self._document.SetFocus()
+
+    def _open_dvm(self, _event: wx.CommandEvent) -> None:
+        text = self._text
+        dialog = wx.FileDialog(
+            self,
+            text("dialog_open"),
+            wildcard=text("filter_dvm") + " (*.dvm)|*.dvm",
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        )
+        if dialog.ShowModal() != wx.ID_OK:
+            return
+        path = dialog.GetPath()
+        try:
+            with open(path, encoding="utf-8") as handle:
+                document = from_dvm(handle.read())
+        except (OSError, DvmError) as error:
+            wx.MessageBox(str(error), text("error_open"), wx.ICON_ERROR)
+            return
+        self._apply(self._editor.load_lines(document.lines))
+        self._document.SetFocus()
+
+    def _save_dvm(self, _event: wx.CommandEvent) -> None:
+        text = self._text
+        dialog = wx.FileDialog(
+            self,
+            text("dialog_save"),
+            wildcard=text("filter_dvm") + " (*.dvm)|*.dvm",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        )
+        if dialog.ShowModal() != wx.ID_OK:
+            return
+        path = dialog.GetPath()
+        content = to_dvm(
+            self._editor.document.lines, language=self._language, profile=self._profile
+        )
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        self.SetStatusText(text("status_exported", path=path))
 
     def _about(self, _event: wx.CommandEvent) -> None:
         from disvimat import __version__
@@ -254,7 +307,9 @@ class EditorWindow(wx.Frame):
             return
         path = dialog.GetPath()
         exporter = XHTMLExporter(self._editor.catalog)
-        content = exporter.xhtml_document(self._editor.document.root)
+        content = exporter.xhtml_document_lines(
+            self._editor.document.lines, language=self._language
+        )
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(content)
         self.SetStatusText(text("status_exported", path=path))
@@ -273,9 +328,8 @@ class EditorWindow(wx.Frame):
             return
         path = dialog.GetPath()
         # Unicode braille (U+2800…), UTF-8: the modern, portable form.
-        content = self._transcriber.unicode(self._editor.document.root)
         with open(path, "w", encoding="utf-8") as handle:
-            handle.write(content + "\n")
+            handle.write(self._braille_text() + "\n")
         self.SetStatusText(text("status_exported", path=path))
 
     def _toggle_braille(self, _event: wx.CommandEvent) -> None:
@@ -286,7 +340,7 @@ class EditorWindow(wx.Frame):
         if self._braille.IsShown():
             self._braille.Hide()
             return
-        self._braille.show_braille(self._transcriber.unicode(self._editor.document.root))
+        self._braille.show_braille(self._braille_text())
         self._braille.Show()
         self._document.SetFocus()
 
@@ -301,6 +355,8 @@ def main() -> None:
         create_editor(language=language, profile=profile, reader=outputs.reader),
         outputs.braille,
         UIText.load(language=language),
+        language=language,
+        profile=profile,
         speech_backend=outputs.speech_backend,
         braille_backend=outputs.braille_backend,
     )
