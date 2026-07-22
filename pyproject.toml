@@ -27,6 +27,10 @@ web = [
 # `python scripts/install_mathcat.py`; the app degrades to its own tables
 # when it is absent. See docs/en/MATHCAT.md.
 mathcat = []
+# liblouis for official text braille is a native library, not a pip package.
+# Install it with `python scripts/install_liblouis.py` (or the system
+# package manager). See docs/en/BRAILLE.md.
+liblouis = []
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",

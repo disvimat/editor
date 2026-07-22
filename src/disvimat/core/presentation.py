@@ -32,6 +32,10 @@ class Presenter:
     def glyph(self, element_id: str) -> str:
         return self._glyphs.get(element_id, "?")
 
+    def text(self, nodes: list[Node]) -> str:
+        """The linear text of a sequence without the cursor (for braille, etc.)."""
+        return "".join(self._node(node) for node in nodes)
+
     # --- internals ----------------------------------------------------------
 
     def _sequence(
