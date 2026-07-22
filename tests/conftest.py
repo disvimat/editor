@@ -1,13 +1,14 @@
 """Shared test configuration.
 
-MathCAT is a process-global singleton and may or may not be installed on a
-given machine (CI has none, a developer box might). To keep the suite
-deterministic and identical everywhere, speech and braille auto-detection
-is disabled for the whole run: the app-level tests exercise our own
-tables, and ``test_mathcat.py`` drives the adapter with an injected fake
-library, which bypasses this switch.
+MathCAT and liblouis are optional native engines that may or may not be
+installed on a given machine (CI has neither; a developer box might have
+both). To keep the suite deterministic and identical everywhere, their
+auto-detection is disabled for the whole run: the app-level tests exercise
+our own tables, while test_mathcat.py and test_liblouis.py drive the
+adapters with injected fake libraries, which bypass these switches.
 """
 
 import os
 
 os.environ["DISVIMAT_NO_MATHCAT"] = "1"
+os.environ["DISVIMAT_NO_LIBLOUIS"] = "1"

@@ -44,7 +44,7 @@ bidimensionnelles** (matrices et tableaux, modules A10/B7).
 | B2 étiquettes / oralisation par langue | **fait** | Voix d'édition en anglais, espagnol et français (nos tables) ; lecture de l'expression entière via [MathCAT](MATHCAT.md) en anglais et espagnol |
 | B3 br8 (NVDA et afficheurs braille) | **à faire** | Nécessite un module complémentaire NVDA dédié ; celui de MathCAT est la référence |
 | B4 fenêtre de présentation graphique | **fait** | Contrôle texte natif (bureau) et MathML natif (web) |
-| B5 transcripteur br6 | **fait (via MathCAT)** | [MathCAT](MATHCAT.md) fournit le braille CMU (espagnol) et UEB (anglais) normatifs, vérifié. Notre transcripteur par tables reste en secours et pour les langues que MathCAT ne couvre pas ; ses valeurs espagnoles restent provisoires |
+| B5 transcripteur braille | **fait (moteurs externes)** | Le braille provient d'une échelle ([BRAILLE.md](BRAILLE.md)) : [MathCAT](MATHCAT.md) pour les mathématiques (CMU, UEB), [liblouis](BRAILLE.md) pour le texte (tables officielles, p. ex. français), nos tables `br6` en dernier recours. Vérifié sous Python 3.13 64 bits |
 | B6 fenêtre br6 | **partiel** | La fenêtre affiche et suit la transcription ; la navigation *à l'intérieur* de la fenêtre braille manque |
 | B7 présentation des structures 2D | **à faire** | |
 | B8 présentation des algorithmes 2D | **à faire** | |

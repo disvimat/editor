@@ -43,7 +43,7 @@ tablas, módulos A10/B7).
 | B2 etiquetas / verbalización por idioma | **hecho** | Voz de edición en inglés, español y francés (nuestras tablas); lectura de la expresión completa vía [MathCAT](MATHCAT.md) en inglés y español |
 | B3 br8 (NVDA y líneas braille) | **pendiente** | Necesita un add-on de NVDA propio; el de MathCAT es la referencia |
 | B4 ventana de presentación gráfica | **hecho** | Control de texto nativo (escritorio) y MathML nativo (web) |
-| B5 transcriptor br6 | **hecho (vía MathCAT)** | [MathCAT](MATHCAT.md) aporta braille CMU (español) y UEB (inglés) normativos, verificado. Nuestro transcriptor por tablas queda como reserva y para idiomas que MathCAT no cubre; sus valores españoles siguen siendo provisionales |
+| B5 transcriptor braille | **hecho (motores externos)** | El braille sale de una escalera ([BRAILLE.md](BRAILLE.md)): [MathCAT](MATHCAT.md) para matemáticas (CMU, UEB), [liblouis](BRAILLE.md) para texto (tablas oficiales, p. ej. francés), nuestras tablas `br6` como último recurso. Verificado en Python 3.13 de 64 bits |
 | B6 ventana br6 | **parcial** | La ventana muestra y sigue la transcripción; falta navegar *dentro* de la ventana braille |
 | B7 presentación de estructuras 2D | **pendiente** | |
 | B8 presentación de algoritmos 2D | **pendiente** | |
