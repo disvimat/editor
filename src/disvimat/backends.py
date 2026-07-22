@@ -12,6 +12,7 @@ combines the core with the MathML exporter, keeping the core itself free
 of that dependency.
 """
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,6 +21,11 @@ from disvimat.core.output import BrailleProvider, ExpressionReader
 from disvimat.core.tables import Catalog
 from disvimat.core.transcription.braille import BrailleTablesMissing, create_transcriber
 from disvimat.export.xhtml import XHTMLExporter
+
+#: Set this environment variable to keep speech and braille on our own
+#: tables even when MathCAT is installed. The test suite sets it so results
+#: do not depend on whether MathCAT happens to be present (CI has none).
+DISABLE_ENV = "DISVIMAT_NO_MATHCAT"
 
 
 @dataclass(frozen=True)
@@ -53,7 +59,10 @@ def create_outputs(
     speech_backend = "tables"
     braille_backend = "none"
 
-    if prefer_mathcat:
+    # The disable switch only affects auto-detection; an injected library
+    # (the tests) always goes through, so the adapter stays testable.
+    disabled = library is None and bool(os.environ.get(DISABLE_ENV))
+    if prefer_mathcat and not disabled:
         try:
             backend = MathCATBackend(mathml_of, language, library=library, rules_dir=rules_dir)
         except MathCATUnavailable:

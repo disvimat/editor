@@ -1,10 +1,11 @@
 """MathCAT adapter and the MathCAT-or-tables choice.
 
-The real MathCAT binding is not on PyPI and has to be built from Rust, so
-these tests drive the adapter with a fake library that records the calls.
-That verifies everything on our side of the boundary — preferences,
-MathML hand-off, braille conversion and the fallback policy — while the
-real binding stays an integration step (see docs/en/MATHCAT.md).
+The real MathCAT binding is not on PyPI and is optional, so these tests
+drive the adapter with a fake library that records the calls. That verifies
+everything on our side of the boundary — preferences, MathML hand-off,
+braille conversion and the fallback policy — regardless of whether MathCAT
+is installed on the machine. See docs/en/MATHCAT.md and
+scripts/install_mathcat.py.
 """
 
 from pathlib import Path
@@ -23,6 +24,9 @@ from disvimat.core.mathcat import (
 from disvimat.core.tables import Catalog
 
 DATA = Path(__file__).resolve().parents[1] / "data"
+#: Any existing directory serves as a stand-in rules dir for the fake tests,
+#: so they never depend on a real MathCAT install being present.
+RULES = DATA
 
 
 class FakeMathCAT:
@@ -69,7 +73,7 @@ def mathml_of(nodes: list[Node]) -> str:
 
 def test_spanish_asks_for_the_cmu_braille_code() -> None:
     library = FakeMathCAT()
-    backend = MathCATBackend(mathml_of, "es", library=library)
+    backend = MathCATBackend(mathml_of, "es", library=library, rules_dir=RULES)
     assert library.preferences["Language"] == "es"
     assert library.preferences["BrailleCode"] == "CMU"
     assert library.preferences["SpeechStyle"] == "ClearSpeak"
@@ -78,7 +82,7 @@ def test_spanish_asks_for_the_cmu_braille_code() -> None:
 
 def test_english_asks_for_ueb() -> None:
     library = FakeMathCAT()
-    MathCATBackend(mathml_of, "en", library=library)
+    MathCATBackend(mathml_of, "en", library=library, rules_dir=RULES)
     assert library.preferences["BrailleCode"] == "UEB"
 
 
@@ -90,22 +94,22 @@ def test_rules_dir_is_passed_when_given(tmp_path: Path) -> None:
 
 def test_reading_hands_over_our_mathml_and_strips_the_answer(catalog: Catalog) -> None:
     library = FakeMathCAT(speech="1 plus 2")
-    backend = MathCATBackend(mathml_of, "es", library=library)
+    backend = MathCATBackend(mathml_of, "es", library=library, rules_dir=RULES)
     assert backend.read(expression()) == "1 plus 2"
     assert library.mathml == "<math><mn>1</mn></math>"
 
 
 def test_braille_comes_through_and_ascii_is_converted() -> None:
     library = FakeMathCAT(braille="⠼⠁⠖⠼⠃")
-    backend = MathCATBackend(mathml_of, "es", library=library)
+    backend = MathCATBackend(mathml_of, "es", library=library, rules_dir=RULES)
     assert backend.unicode(expression()) == "⠼⠁⠖⠼⠃"
     assert backend.ascii(expression()) == "#a6#b"
 
 
-def test_a_language_mathcat_does_not_speak_is_refused() -> None:
-    """French is not among MathCAT's languages: it must fall back to us."""
+def test_a_language_we_keep_on_tables_is_refused() -> None:
+    """French is kept on our tables (MathCAT's French rules are incomplete)."""
     with pytest.raises(MathCATUnavailable, match="does not speak"):
-        MathCATBackend(mathml_of, "fr", library=FakeMathCAT())
+        MathCATBackend(mathml_of, "fr", library=FakeMathCAT(), rules_dir=RULES)
 
 
 def test_missing_library_is_reported_clearly() -> None:
@@ -118,7 +122,7 @@ def test_missing_library_is_reported_clearly() -> None:
 
 
 def test_mathcat_leads_when_available(catalog: Catalog) -> None:
-    outputs = create_outputs(catalog, "es", directory=DATA, library=FakeMathCAT())
+    outputs = create_outputs(catalog, "es", directory=DATA, library=FakeMathCAT(), rules_dir=RULES)
     assert outputs.speech_backend == "mathcat"
     assert outputs.braille_backend == "mathcat"
     assert outputs.braille is not None
@@ -135,15 +139,17 @@ def test_tables_take_over_when_mathcat_is_absent(catalog: Catalog) -> None:
 
 
 def test_french_keeps_our_tables_and_has_no_braille(catalog: Catalog) -> None:
-    outputs = create_outputs(catalog, "fr", directory=DATA, library=FakeMathCAT())
-    assert outputs.speech_backend == "tables"  # MathCAT has no French
+    outputs = create_outputs(catalog, "fr", directory=DATA, library=FakeMathCAT(), rules_dir=RULES)
+    assert outputs.speech_backend == "tables"  # French is kept on our tables
     assert outputs.braille_backend == "none"  # and we have no French braille
     assert outputs.braille is None
 
 
 def test_editor_reads_the_line_through_mathcat(catalog: Catalog) -> None:
     """Reading the line uses MathCAT; editing feedback stays ours."""
-    outputs = create_outputs(catalog, "es", directory=DATA, library=FakeMathCAT(speech="1 más 2"))
+    outputs = create_outputs(
+        catalog, "es", directory=DATA, library=FakeMathCAT(speech="1 más 2"), rules_dir=RULES
+    )
     editor = create_editor(DATA, language="es", reader=outputs.reader)
     editor.type_character("1")
     feedback = editor.press("+")
@@ -160,7 +166,9 @@ def test_structures_reach_mathcat_as_mathml(catalog: Catalog) -> None:
     from disvimat.export.xhtml import XHTMLExporter
 
     library = FakeMathCAT()
-    backend = MathCATBackend(XHTMLExporter(catalog).mathml_text, "es", library=library)
+    backend = MathCATBackend(
+        XHTMLExporter(catalog).mathml_text, "es", library=library, rules_dir=RULES
+    )
     backend.read([Structure("fraction", [[Character("1")], [Character("2")]])])
     assert library.mathml is not None
     assert "<mfrac>" in library.mathml
