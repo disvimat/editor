@@ -28,7 +28,7 @@ bidimensionnelles** (matrices et tableaux, modules A10/B7).
 | A2 signes et structures → frappes | **fait** | `keys_signs.json` |
 | A3 commandes → frappes | **partiel** | Table faite ; la grammaire des *conditions* n'est pas implémentée (le champ `condition` existe et les entrées conditionnelles sont ignorées) |
 | A4 touches alternatives (pavé numérique) | **partiel** | Quatre attributions seulement ; le schéma complet reste à faire |
-| A5 concepteur de scripts / modules | **à faire** | Le noyau constitue déjà l'API publique nécessaire |
+| A5 concepteur de scripts / modules | **fait** | [Extensions](ADDONS.md) : une fonction `register(registry)` ajoute commandes (touche, parole, code) et exports, découvertes comme paquets installés ou fichiers `.py` dans `DISVIMAT_ADDONS`. Les pannes sont contenues |
 | A6 fichier d'aide (modifiable, par langue) | **à faire** | |
 | A7 configurateur de profils | **partiel** | `profiles.json` limite les éléments par niveau et verrouille la calculatrice ; aucune interface d'édition des profils |
 | A8 calculatrice | **partiel** | Arithmétique exacte des fractions, priorités, puissances et racines exactes ; ni variables, ni fonctions, ni trigonométrie |

@@ -27,7 +27,7 @@ tables, modules A10/B7).
 | A2 signs and structures → key strokes | **done** | `keys_signs.json` |
 | A3 commands → key strokes | **partial** | Table done; the *conditions* grammar is not implemented (the `condition` field exists and conditional entries are ignored) |
 | A4 alternative keys (numeric keypad) | **partial** | Four bindings only; the full keypad scheme is pending |
-| A5 script / add-on designer | **pending** | The core is a clean public API, which is the prerequisite |
+| A5 script / add-on designer | **done** | [Add-ons](ADDONS.md): a `register(registry)` function adds commands (key, speech, code) and exporters, found as installed packages or as `.py` files in `DISVIMAT_ADDONS`. Failures are contained |
 | A6 help file (editable, per language) | **pending** | |
 | A7 user profile configurator | **partial** | `profiles.json` limits elements per level and locks the calculator; there is no editing interface for profiles |
 | A8 calculator | **partial** | Exact fraction arithmetic, precedence, powers and exact roots; no variables, functions or trigonometry |

@@ -27,7 +27,7 @@ tablas, módulos A10/B7).
 | A2 signos y estructuras → pulsaciones | **hecho** | `keys_signs.json` |
 | A3 comandos → pulsaciones | **parcial** | Tabla hecha; falta la gramática de *condicionantes* (el campo `condition` existe y las entradas condicionales se ignoran) |
 | A4 teclas alternativas (bloque numérico) | **parcial** | Solo cuatro asignaciones; falta el esquema completo |
-| A5 diseñador de scripts o add-ons | **pendiente** | El núcleo es ya una API pública limpia, que es el requisito previo |
+| A5 diseñador de scripts o add-ons | **hecho** | [Add-ons](ADDONS.md): una función `register(registry)` añade comandos (tecla, voz, código) y exportadores, descubiertos como paquetes instalados o como `.py` en `DISVIMAT_ADDONS`. Los fallos quedan contenidos |
 | A6 archivo de ayuda (editable, por idioma) | **pendiente** | |
 | A7 configurador de perfiles | **parcial** | `profiles.json` limita elementos por nivel y bloquea la calculadora; no hay interfaz para editar perfiles |
 | A8 calculadora | **parcial** | Aritmética exacta de fracciones, precedencia, potencias y raíces exactas; sin variables, funciones ni trigonometría |

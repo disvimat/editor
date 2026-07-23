@@ -12,3 +12,6 @@ import os
 
 os.environ["DISVIMAT_NO_MATHCAT"] = "1"
 os.environ["DISVIMAT_NO_LIBLOUIS"] = "1"
+# Likewise for add-ons: tests must not depend on what is installed or on a
+# DISVIMAT_ADDONS folder the developer happens to have set.
+os.environ["DISVIMAT_NO_ADDONS"] = "1"

@@ -18,6 +18,7 @@ expression on screen, as speech, in braille, and as exportable files.
 | External speech and braille engine | [MATHCAT](docs/en/MATHCAT.md) | [MATHCAT](docs/es/MATHCAT.md) | [MATHCAT](docs/fr/MATHCAT.md) |
 | How braille is produced | [BRAILLE](docs/en/BRAILLE.md) | [BRAILLE](docs/es/BRAILLE.md) | [BRAILLE](docs/fr/BRAILLE.md) |
 | Document format (multi-line, `.dvm`) | [DOCUMENT](docs/en/DOCUMENT.md) | [DOCUMENT](docs/es/DOCUMENT.md) | [DOCUMENT](docs/fr/DOCUMENT.md) |
+| Extending it (add-ons) | [ADDONS](docs/en/ADDONS.md) | [ADDONS](docs/es/ADDONS.md) | [ADDONS](docs/fr/ADDONS.md) |
 
 The original project brief, in Spanish, is preserved at
 [docs/BRIEF.es.md](docs/BRIEF.es.md); it is the source of the module
