@@ -26,6 +26,7 @@ from disvimat.core.tables import (
     ProfileEntry,
     Table,
     data_dir,
+    keymap_path,
     language_table_path,
     load_table,
 )
@@ -238,13 +239,16 @@ def create_editor(
     language: str = "en",
     profile: str | None = None,
     reader: ExpressionReader | None = None,
+    keymap: str | None = None,
 ) -> Editor:
     """Build an editor loading every table from the data directory.
 
     ``language`` resolves the language-dependent tables (falling back to
     the reference language, E6); ``profile`` limits elements by level (A7);
     ``reader`` optionally replaces the table speaker when reading a whole
-    expression (see :mod:`disvimat.backends`).
+    expression (see :mod:`disvimat.backends`); ``keymap`` loads a keyboard
+    profile that overrides the default strokes, so the editor can answer to
+    another editor's commands (Lambda, EDICO…).
     """
     directory = directory or data_dir()
     catalog = Catalog.load(directory / "elements.json")
@@ -261,6 +265,13 @@ def create_editor(
         load_table(directory / name, KeyEntry)
         for name in ("keys_signs.json", "keys_commands.json", "keys_numpad.json")
     ]
+    if keymap:
+        # The profile is loaded last, so its strokes win over the defaults;
+        # anything it leaves out keeps the built-in binding.
+        path = keymap_path(directory, keymap)
+        if not path.is_file():
+            raise ValueError(f"unknown keymap: {keymap!r}")
+        key_tables.append(load_table(path, KeyEntry))
     glyphs: Table[GlyphEntry] = load_table(directory / "glyphs.json", GlyphEntry)
     labels: Table[LabelEntry] = load_table(
         language_table_path(directory, "labels", language), LabelEntry

@@ -58,14 +58,14 @@ class OpenRequest(BaseModel):
 class _Session:
     """Editor and export helpers of one user session."""
 
-    def __init__(self, language: str, profile: str | None) -> None:
+    def __init__(self, language: str, profile: str | None, keymap: str | None = None) -> None:
         self.language = language
         catalog = Catalog.load(data_dir() / "elements.json")
         # MathCAT when available, our tables otherwise; braille stays
         # unavailable rather than serving another language's braille.
         outputs = create_outputs(catalog, language)
         self.editor: Editor = create_editor(
-            language=language, profile=profile, reader=outputs.reader
+            language=language, profile=profile, reader=outputs.reader, keymap=keymap
         )
         self.exporter = XHTMLExporter(self.editor.catalog)
         self.transcriber = outputs.braille
@@ -99,6 +99,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="DISVIMAT web")
     sessions: dict[str, _Session] = {}
     default_language = os.environ.get("DISVIMAT_LANG", "en")
+    default_keymap = os.environ.get("DISVIMAT_KEYMAP")
 
     def get_session(session_id: str) -> _Session:
         session = sessions.get(session_id)
@@ -120,9 +121,15 @@ def create_app() -> FastAPI:
         return render_page(language or default_language)
 
     @app.post("/api/session", response_model=View)
-    def new_session(language: str | None = None, profile: str | None = None) -> View:
+    def new_session(
+        language: str | None = None, profile: str | None = None, keymap: str | None = None
+    ) -> View:
         session_id = uuid.uuid4().hex
-        session = _Session(language=language or default_language, profile=profile)
+        session = _Session(
+            language=language or default_language,
+            profile=profile,
+            keymap=keymap or default_keymap,
+        )
         sessions[session_id] = session
         return view(session_id, session, session.editor.state())
 

@@ -45,6 +45,7 @@ Two environment variables configure both interfaces:
 |---|---|---|
 | `DISVIMAT_LANG` | interface and speech language | `en` (default), `es`, `fr` |
 | `DISVIMAT_PROFILE` | user profile (A7) | `beginner`, `intermediate`, `advanced`, `exam` |
+| `DISVIMAT_KEYMAP` | keyboard profile — another editor's commands | `lambda`, `edico` (see `data/keymaps/`) |
 | `DISVIMAT_DATA` | table directory | a path; defaults to `data/` |
 
 On the web the language is also a query parameter: `http://127.0.0.1:8000/?language=fr`.

@@ -67,7 +67,7 @@ files = ["src"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["wx", "wx.*", "uvicorn", "accessible_output2.*"]
+module = ["wx", "wx.*", "uvicorn", "accessible_output2.*", "speechd"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
