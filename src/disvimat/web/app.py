@@ -139,6 +139,11 @@ def create_app() -> FastAPI:
         result: Result | None = None
         if request.keys:
             result = session.editor.press(request.keys)
+        # The second stroke of a chord ("Ctrl+G, P") arrives as a bare
+        # character; while a chord waits, resolve it as a key stroke
+        # (bindings name letters in upper case) rather than typing it.
+        if result is None and request.character and session.editor.chord_pending():
+            result = session.editor.press(request.character.upper())
         if result is None and request.character:
             result = session.editor.type_character(request.character)
         if result is None:

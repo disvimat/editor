@@ -25,8 +25,9 @@ bidimensionnelles** (matrices et tableaux, modules A10/B7).
 | Module | État | Remarques |
 |---|---|---|
 | A1 filtre Unicode/MathML → DisvimatEditor | **fait** | Aller-retour vérifié par les tests |
-| A2 signes et structures → frappes | **fait** | `keys_signs.json` |
+| A2 signes et structures → frappes | **fait** | `keys_signs.json` ; les frappes peuvent être des **accords** (`"Ctrl+G, P"`, la convention d'EDICO) résolus par une petite machine à états |
 | A3 commandes → frappes | **partiel** | Table faite ; la grammaire des *conditions* n'est pas implémentée (le champ `condition` existe et les entrées conditionnelles sont ignorées) |
+| — profils de clavier et réattribution utilisateur | **fait** | Les profils de compatibilité (`data/keymaps/`, Lambda/EDICO) se chargent par-dessus les tables par défaut ; un profil de clavier par utilisateur (`$DISVIMAT_USER_KEYMAP` ou `~/.disvimat/user_keys.json`) se charge en dernier et l'emporte. L'outil `rebind` réattribue une touche avec détection de conflits (refuse les commandes inconnues et les chevauchements d'accords, avertit lorsqu'une frappe est volée) |
 | A4 touches alternatives (pavé numérique) | **partiel** | Quatre attributions seulement ; le schéma complet reste à faire |
 | A5 concepteur de scripts / modules | **fait** | [Extensions](ADDONS.md) : une fonction `register(registry)` ajoute commandes (touche, parole, code) et exports, découvertes comme paquets installés ou fichiers `.py` dans `DISVIMAT_ADDONS`. Les pannes sont contenues |
 | A6 fichier d'aide (modifiable, par langue) | **à faire** | |

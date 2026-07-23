@@ -149,6 +149,14 @@ class EditorWindow(wx.Frame):
             event.Skip()
             return
         character = chr(code)
+        # The second stroke of a chord ("Ctrl+G, P") is a bare letter that
+        # would otherwise be typed. While a chord waits, route it as a key
+        # stroke (bindings name letters in upper case) instead of inserting it.
+        if self._editor.chord_pending():
+            completed = self._editor.press(character.upper())
+            if completed is not None:
+                self._apply(completed)
+                return
         result = self._editor.press(character)
         if result is not None:  # an assigned sign or structure
             self._apply(result)

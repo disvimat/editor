@@ -39,3 +39,28 @@ def key_conflicts(*tables: Table[KeyEntry]) -> dict[str, list[str]]:
         for (keys, condition), ids in by_stroke.items()
         if len(ids) > 1
     }
+
+
+def chord_shadow_conflicts(*tables: Table[KeyEntry]) -> dict[str, str]:
+    """Chords where one binding makes another unreachable.
+
+    ``"Ctrl+G"`` and ``"Ctrl+G, P"`` cannot both work: after ``Ctrl+G`` the
+    editor either fires the first or waits for the second, never both. This
+    reports ``{shorter chord: longer chord}`` for every such overlap, so a
+    reassignment tool can refuse it. It complements :func:`key_conflicts`,
+    which catches identical bindings.
+    """
+    from disvimat.core.keyboard import parse_chord
+
+    sequences: dict[tuple[str, ...], str] = {}
+    for table in tables:
+        for entry in table.entries:
+            if entry.condition is None:
+                sequences[parse_chord(entry.keys)] = entry.keys
+    conflicts: dict[str, str] = {}
+    for sequence, keys in sequences.items():
+        for length in range(1, len(sequence)):
+            prefix = sequence[:length]
+            if prefix in sequences:
+                conflicts[sequences[prefix]] = keys
+    return conflicts

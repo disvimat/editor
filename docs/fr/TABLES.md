@@ -62,6 +62,36 @@ Modifiez la valeur `keys` dans la table concernée. Les noms sont canoniques
 (`Ctrl+F`, `Left`, `NumAdd`) et identiques sur le bureau et sur le web. Les
 tests refusent une frappe attribuée deux fois.
 
+Une frappe peut être un **accord** : une séquence séparée par des virgules
+comme `"Ctrl+G, P"` (la convention d'EDICO pour les lettres grecques et les
+titres). La première frappe met le clavier en attente ; la suivante la
+complète. Un accord et une frappe simple ne peuvent pas se chevaucher :
+`"Ctrl+G"` et `"Ctrl+G, P"` ensemble sont refusées, car après `Ctrl+G`
+l'éditeur ne peut faire qu'une seule chose.
+
+### Réattribuer une touche en tant qu'utilisateur, sans conflit
+
+L'utilisateur ne modifie pas les tables livrées. Ses réattributions
+personnelles vivent dans un profil de clavier que l'éditeur charge **en
+dernier** : une attribution de l'utilisateur l'emporte donc sur les tables
+par défaut, sur un profil de compatibilité (Lambda, EDICO) et sur les
+extensions. Le fichier est `$DISVIMAT_USER_KEYMAP` ou
+`~/.disvimat/user_keys.json`.
+
+L'outil `rebind` l'édite en toute sûreté :
+
+```bash
+python -m disvimat.tools.rebind show "Ctrl+F"      # ce que fait une frappe
+python -m disvimat.tools.rebind set fraction "Ctrl+B"
+python -m disvimat.tools.rebind clear fraction
+python -m disvimat.tools.rebind list
+```
+
+Avant d'enregistrer, il **refuse** une attribution impossible (une commande
+inconnue, ou un accord qui en masquerait un autre) et **avertit** lorsque la
+nouvelle frappe était déjà utilisée par une autre commande, en nommant celle
+qui la perd — pour qu'une réattribution soit délibérée, jamais silencieuse.
+
 ### Ajouter une langue
 
 Copiez `labels.en.json`, `messages.en.json` et `ui.en.json` sous le code de
