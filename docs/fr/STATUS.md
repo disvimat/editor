@@ -33,7 +33,7 @@ bidimensionnelles** (matrices et tableaux, modules A10/B7).
 | A7 configurateur de profils | **partiel** | `profiles.json` limite les éléments par niveau et verrouille la calculatrice ; aucune interface d'édition des profils |
 | A8 calculatrice | **partiel** | Arithmétique exacte des fractions, priorités, puissances et racines exactes ; ni variables, ni fonctions, ni trigonométrie |
 | A9 verrou de calculatrice | **fait** | `calculator: false` dans le profil (profil `exam`) |
-| A10 structures bidimensionnelles (tableaux, matrices, déterminants) | **à faire** | |
+| A10 structures bidimensionnelles (tableaux, matrices, déterminants) | **partiel** | Matrices : insérer (`Ctrl+Maj+M`), navigation en grille, ajouter ligne/colonne (`Alt+Bas`/`Alt+Droite`), lecture ligne par ligne, MathML `<mtable>` aller-retour, `.dvm`. Déterminants/tableaux réutilisent le même nœud |
 | A11 algorithmes bidimensionnels | **à faire** | |
 
 ## B) Modules de présentation
@@ -46,7 +46,7 @@ bidimensionnelles** (matrices et tableaux, modules A10/B7).
 | B4 fenêtre de présentation graphique | **fait** | Contrôle texte natif (bureau) et MathML natif (web) |
 | B5 transcripteur braille | **fait (moteurs externes)** | Le braille provient d'une échelle ([BRAILLE.md](BRAILLE.md)) : [MathCAT](MATHCAT.md) pour les mathématiques (CMU, UEB), [liblouis](BRAILLE.md) pour le texte (tables officielles, p. ex. français), nos tables `br6` en dernier recours. Vérifié sous Python 3.13 64 bits |
 | B6 fenêtre br6 | **partiel** | La fenêtre affiche et suit la transcription ; la navigation *à l'intérieur* de la fenêtre braille manque |
-| B7 présentation des structures 2D | **à faire** | |
+| B7 présentation des structures 2D | **partiel** | Forme linéaire `[a,b;c,d]` à l'écran et `<mtable>` natif sur le web ; une fenêtre 2D dédiée reste à faire |
 | B8 présentation des algorithmes 2D | **à faire** | |
 | B9 messages en langue des signes | **à faire** | |
 

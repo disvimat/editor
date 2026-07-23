@@ -5,7 +5,7 @@ Structures are read linearly through their ``parts``:
 so the synthesiser reads "123" instead of "1, 2, 3".
 """
 
-from disvimat.core.document import Character, Node, Sign, Structure
+from disvimat.core.document import Character, Matrix, Node, Sign, Structure
 from disvimat.core.elements import SLOT_ID
 from disvimat.core.tables import LabelEntry, Table
 
@@ -28,6 +28,8 @@ class Speaker:
                 return self.label(element_id)
             case Structure():
                 return self._structure(node)
+            case Matrix():
+                return self._matrix(node)
 
     def read(self, nodes: list[Node]) -> str:
         """Read a whole expression (the :class:`ExpressionReader` port)."""
@@ -62,6 +64,23 @@ class Speaker:
             if number > 0 and separator:
                 pieces.append(separator)
             pieces.append(self.sequence(slot))
+        if end:
+            pieces.append(end)
+        return " ".join(pieces)
+
+    def _matrix(self, matrix: Matrix) -> str:
+        """Read a matrix row by row: "matrix ... next row ... end of matrix"."""
+        entry = self._entries.get(matrix.element_id)
+        parts = entry.parts if entry and entry.parts else {}
+        start = parts.get("start", self.label(matrix.element_id))
+        row_separator = parts.get("separator", "")
+        end = parts.get("end", "")
+        pieces = [start] if start else []
+        for row in range(matrix.rows):
+            if row > 0 and row_separator:
+                pieces.append(row_separator)
+            for col in range(matrix.cols):
+                pieces.append(self.sequence(matrix.cell(row, col)))
         if end:
             pieces.append(end)
         return " ".join(pieces)

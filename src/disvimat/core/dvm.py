@@ -17,7 +17,7 @@ A line is a list of nodes; a document is a list of lines.
 import json
 from dataclasses import dataclass
 
-from disvimat.core.document import Character, Line, Node, Sign, Structure
+from disvimat.core.document import Character, Line, Matrix, Node, Sign, Structure
 
 #: File format marker and version, stored in every ``.dvm``.
 FORMAT = "disvimat-document"
@@ -48,6 +48,13 @@ def _node_to_json(node: Node) -> dict[str, object]:
                 "structure": element_id,
                 "slots": [[_node_to_json(n) for n in slot] for slot in slots],
             }
+        case Matrix(element_id=element_id, rows=rows, cols=cols, slots=cells):
+            return {
+                "matrix": element_id,
+                "rows": rows,
+                "cols": cols,
+                "cells": [[_node_to_json(n) for n in cell] for cell in cells],
+            }
 
 
 def _node_from_json(data: dict[str, object]) -> Node:
@@ -61,6 +68,17 @@ def _node_from_json(data: dict[str, object]) -> Node:
             raise DvmError("structure slots must be a list")
         slots = [[_node_from_json(n) for n in slot] for slot in raw_slots]
         return Structure(str(data["structure"]), slots)
+    if "matrix" in data:
+        raw_cells = data.get("cells", [])
+        if not isinstance(raw_cells, list):
+            raise DvmError("matrix cells must be a list")
+        cells = [[_node_from_json(n) for n in cell] for cell in raw_cells]
+        return Matrix(
+            str(data["matrix"]),
+            rows=int(str(data.get("rows", 0))),
+            cols=int(str(data.get("cols", 0))),
+            slots=cells,
+        )
     raise DvmError(f"unknown node: {data!r}")
 
 

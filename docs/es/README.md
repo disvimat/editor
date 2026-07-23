@@ -83,6 +83,8 @@ mismos en todos los idiomas y en las dos interfaces.
 | `Ctrl+L` / `Ctrl+Shift+L` | Leer el elemento / la línea completa |
 | `Ctrl+Intro` | Calcular el resultado |
 | `Ctrl+I` / `Ctrl+E` | Importar / exportar XHTML (escritorio) |
+| `Ctrl+Shift+M` | Insertar una matriz |
+| `Alt+Abajo` / `Alt+Derecha` | Añadir fila / columna |
 | `Ctrl+6` | Ventana braille (escritorio) |
 
 El bloque numérico también lleva `+`, `−`, `×` y `÷` (este último inserta

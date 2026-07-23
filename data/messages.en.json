@@ -18,6 +18,10 @@
     {
       "id": "addon_failed",
       "text": "the add-on could not run"
+    },
+    {
+      "id": "matrix_cell",
+      "text": "row {row} column {column}"
     }
   ]
 }

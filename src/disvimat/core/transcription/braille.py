@@ -19,7 +19,7 @@ raised and the application disables its braille features.
 
 from pathlib import Path
 
-from disvimat.core.document import Character, Node, Sign, Structure
+from disvimat.core.document import Character, Matrix, Node, Sign, Structure
 from disvimat.core.elements import SLOT_ID
 from disvimat.core.tables import (
     BrailleEntry,
@@ -117,6 +117,8 @@ class BrailleTranscriber:
             in_number = False
             if isinstance(node, Sign):
                 output.extend(self._element(node.element_id))
+            elif isinstance(node, Matrix):
+                self._matrix(node, output)
             else:
                 self._structure(node, output)
 
@@ -144,6 +146,21 @@ class BrailleTranscriber:
             else:
                 output.extend(self._element(SLOT_ID))
         output.extend(parts.get("end", []))
+
+    def _matrix(self, matrix: Matrix, output: list[int]) -> None:
+        """Best-effort table braille: cells in order, rows separated by a space.
+
+        Proper mathematical matrix braille is normative and belongs to
+        MathCAT; this is the fallback so a matrix still transcribes when the
+        external engines are absent.
+        """
+        for row in range(matrix.rows):
+            if row > 0:
+                output.append(0)  # blank cell between rows
+            for col in range(matrix.cols):
+                if col > 0:
+                    output.append(0)
+                self._sequence(matrix.cell(row, col), output)
 
     def _element(self, element_id: str) -> list[int]:
         return self._by_element.get(element_id, [_UNKNOWN_CELL])

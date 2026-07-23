@@ -18,6 +18,10 @@
     {
       "id": "addon_failed",
       "text": "l'extension n'a pas pu s'exécuter"
+    },
+    {
+      "id": "matrix_cell",
+      "text": "ligne {row} colonne {column}"
     }
   ]
 }

@@ -36,7 +36,29 @@ class Structure:
     slots: list[list["Node"]]
 
 
-Node = Character | Sign | Structure
+@dataclass
+class Matrix:
+    """A two-dimensional grid of cells (rows x columns).
+
+    ``slots`` holds the cells flat, in row-major order (length
+    ``rows * cols``), which lets the cursor descend into a matrix cell with
+    the very same ``(node index, slot index)`` machinery used for a
+    structure's slots — a matrix is, for navigation, a container of slots.
+    """
+
+    element_id: str
+    rows: int
+    cols: int
+    slots: list[list["Node"]]
+
+    def cell(self, row: int, col: int) -> list["Node"]:
+        return self.slots[row * self.cols + col]
+
+
+Node = Character | Sign | Structure | Matrix
+
+#: Anything the cursor can descend into: it exposes ``slots``.
+Container = Structure | Matrix
 
 
 @dataclass
@@ -90,7 +112,7 @@ class Document:
         sequence = self.current_line()
         for node_index, slot_index in self._cursor.path:
             node = sequence[node_index]
-            assert isinstance(node, Structure)
+            assert isinstance(node, Container)
             sequence = node.slots[slot_index]
         return sequence
 
@@ -100,18 +122,35 @@ class Document:
     def cursor_index(self) -> int:
         return self._cursor.index
 
-    def current_structure(self) -> Structure | None:
-        """The structure whose slot holds the cursor, if any."""
+    def current_container(self) -> Container | None:
+        """The structure or matrix whose slot holds the cursor, if any."""
         if not self._cursor.path:
             return None
         sequence = self.current_line()
         for node_index, slot_index in self._cursor.path[:-1]:
             node = sequence[node_index]
-            assert isinstance(node, Structure)
+            assert isinstance(node, Container)
             sequence = node.slots[slot_index]
         node = sequence[self._cursor.path[-1][0]]
-        assert isinstance(node, Structure)
+        assert isinstance(node, Container)
         return node
+
+    def current_structure(self) -> Structure | None:
+        """The structure whose slot holds the cursor, if any."""
+        container = self.current_container()
+        return container if isinstance(container, Structure) else None
+
+    def current_matrix(self) -> Matrix | None:
+        """The matrix whose cell holds the cursor, if any."""
+        container = self.current_container()
+        return container if isinstance(container, Matrix) else None
+
+    def cursor_cell(self) -> tuple[int, int] | None:
+        """The (row, column) of the cursor inside a matrix, if in one."""
+        matrix = self.current_matrix()
+        if matrix is None:
+            return None
+        return divmod(self._cursor.path[-1][1], matrix.cols)
 
     def node_right(self) -> Node | None:
         """The node immediately to the right of the cursor, if any."""
@@ -130,11 +169,11 @@ class Document:
     # --- editing ----------------------------------------------------------
 
     def insert(self, node: Node) -> None:
-        """Insert a node at the cursor; structures are entered at slot 1."""
+        """Insert a node at the cursor; containers are entered at slot 1."""
         self._save_snapshot()
         sequence = self.current_sequence()
         sequence.insert(self._cursor.index, node)
-        if isinstance(node, Structure):
+        if isinstance(node, Container):
             self._cursor.path.append((self._cursor.index, 0))
             self._cursor.index = 0
         else:
@@ -247,41 +286,83 @@ class Document:
         self._cursor.index = len(self.current_line())
         return True
 
-    def enter(self) -> Structure | None:
-        """Enter the first slot of the structure right of the cursor."""
+    def enter(self) -> Container | None:
+        """Enter the first slot of the container right of the cursor."""
         node = self.node_right()
-        if not isinstance(node, Structure):
+        if not isinstance(node, Container):
             return None
         self._cursor.path.append((self._cursor.index, 0))
         self._cursor.index = 0
         return node
 
-    def exit(self) -> Structure | None:
-        """Leave the current structure; the cursor lands just after it."""
-        structure = self.current_structure()
-        if structure is None:
+    def exit(self) -> Container | None:
+        """Leave the current container; the cursor lands just after it."""
+        container = self.current_container()
+        if container is None:
             return None
         node_index, _ = self._cursor.path.pop()
         self._cursor.index = node_index + 1
-        return structure
+        return container
 
     def next_slot(self) -> int | None:
-        """Move to the next slot of the current structure.
+        """Move to the next slot of the current container.
 
         Returns the index of the new slot; when the cursor was in the last
-        slot (or outside any structure) it leaves the structure, like
+        slot (or outside any container) it leaves the container, like
         :meth:`exit`, and returns ``None``.
         """
-        structure = self.current_structure()
-        if structure is None:
+        container = self.current_container()
+        if container is None:
             return None
         node_index, slot_index = self._cursor.path[-1]
-        if slot_index + 1 >= len(structure.slots):
+        if slot_index + 1 >= len(container.slots):
             self.exit()
             return None
         self._cursor.path[-1] = (node_index, slot_index + 1)
         self._cursor.index = 0
         return slot_index + 1
+
+    # --- matrices ---------------------------------------------------------
+
+    def move_in_matrix(self, delta_row: int, delta_col: int) -> tuple[int, int] | None:
+        """Move the cursor between matrix cells; returns the new (row, col)."""
+        matrix = self.current_matrix()
+        if matrix is None:
+            return None
+        node_index, flat = self._cursor.path[-1]
+        row, col = divmod(flat, matrix.cols)
+        new_row, new_col = row + delta_row, col + delta_col
+        if not (0 <= new_row < matrix.rows and 0 <= new_col < matrix.cols):
+            return None
+        self._cursor.path[-1] = (node_index, new_row * matrix.cols + new_col)
+        self._cursor.index = 0
+        return new_row, new_col
+
+    def matrix_add_row(self) -> bool:
+        """Add an empty row below the cursor's row (cursor stays in a matrix)."""
+        matrix = self.current_matrix()
+        if matrix is None:
+            return False
+        self._save_snapshot()  # the live matrix is untouched by the snapshot
+        row = self._cursor.path[-1][1] // matrix.cols
+        at = (row + 1) * matrix.cols
+        matrix.slots[at:at] = [[] for _ in range(matrix.cols)]
+        matrix.rows += 1
+        return True
+
+    def matrix_add_column(self) -> bool:
+        """Add an empty column after the cursor's column."""
+        matrix = self.current_matrix()
+        if matrix is None:
+            return False
+        self._save_snapshot()
+        col = self._cursor.path[-1][1] % matrix.cols
+        # Insert one cell after ``col`` in every row, walking backwards so
+        # earlier insertions do not shift later positions.
+        for row in reversed(range(matrix.rows)):
+            matrix.slots.insert(row * matrix.cols + col + 1, [])
+        matrix.cols += 1
+        return True
 
     # --- undo -------------------------------------------------------------
 

@@ -32,7 +32,7 @@ tables, modules A10/B7).
 | A7 user profile configurator | **partial** | `profiles.json` limits elements per level and locks the calculator; there is no editing interface for profiles |
 | A8 calculator | **partial** | Exact fraction arithmetic, precedence, powers and exact roots; no variables, functions or trigonometry |
 | A9 calculator locker | **done** | `calculator: false` in the profile (the `exam` profile) |
-| A10 two-dimensional structures (tables, matrices, determinants) | **pending** | |
+| A10 two-dimensional structures (tables, matrices, determinants) | **partial** | Matrices: insert (`Ctrl+Shift+M`), grid navigation, add row/column (`Alt+Down`/`Alt+Right`), read row by row, MathML `<mtable>` in and out, `.dvm`. Determinants/tables reuse the same node |
 | A11 two-dimensional algorithms | **pending** | |
 
 ## B) Presentation modules
@@ -45,7 +45,7 @@ tables, modules A10/B7).
 | B4 graphical presentation window | **done** | Native text control (desktop) and native MathML (web) |
 | B5 braille transcriber | **done (external engines)** | Braille comes from a ladder ([BRAILLE.md](BRAILLE.md)): [MathCAT](MATHCAT.md) for math (CMU, UEB), [liblouis](BRAILLE.md) for text (official tables, e.g. French), our `br6` tables as last resort. Verified on 64-bit Python 3.13 |
 | B6 br6 window | **partial** | The window shows and follows the transcription; navigating *inside* the braille window is not implemented |
-| B7 presentation of 2D structures | **pending** | |
+| B7 presentation of 2D structures | **partial** | Linear form `[a,b;c,d]` on screen and native `<mtable>` on the web; a dedicated 2D window is still to come |
 | B8 presentation of 2D algorithms | **pending** | |
 | B9 sign-language messages | **pending** | |
 
