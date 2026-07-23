@@ -10,9 +10,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from disvimat.core.addons import MSG_ADDON_FAILED, Registry, load_addons
 from disvimat.core.calculator import CalculationError, Calculator
 from disvimat.core.document import Character, Document, Node, Sign, Structure
-from disvimat.core.elements import SLOT_ID, ElementType
+from disvimat.core.elements import SLOT_ID, Element, ElementType
 from disvimat.core.keyboard import Keyboard
 from disvimat.core.output import ExpressionReader
 from disvimat.core.presentation import Presenter
@@ -58,6 +59,7 @@ class Editor:
         *,
         calculator_allowed: bool = True,
         reader: ExpressionReader | None = None,
+        addons: Registry | None = None,
     ) -> None:
         self.catalog = catalog
         self.document = Document()
@@ -87,6 +89,22 @@ class Editor:
             "read_line": self._cmd_read_line,
             "calculate": self._cmd_calculate,
         }
+        # Add-on commands join the same dispatch table, so they behave like
+        # built-in ones — key resolution, speech and undo included.
+        self.addons = addons if addons is not None else Registry()
+        for command in self.addons.commands.values():
+            self._commands[command.id] = self._addon_runner(command.run)
+
+    def _addon_runner(self, run: Callable[["Editor"], str]) -> Callable[[], str]:
+        """Wrap an add-on command so a failure cannot break the editor."""
+
+        def call() -> str:
+            try:
+                return run(self)
+            except Exception:  # noqa: BLE001 - contained on purpose
+                return self._message(MSG_ADDON_FAILED)
+
+        return call
 
     # --- API for the interfaces ---------------------------------------------
 
@@ -240,6 +258,7 @@ def create_editor(
     profile: str | None = None,
     reader: ExpressionReader | None = None,
     keymap: str | None = None,
+    addons: Registry | bool = True,
 ) -> Editor:
     """Build an editor loading every table from the data directory.
 
@@ -248,10 +267,16 @@ def create_editor(
     ``reader`` optionally replaces the table speaker when reading a whole
     expression (see :mod:`disvimat.backends`); ``keymap`` loads a keyboard
     profile that overrides the default strokes, so the editor can answer to
-    another editor's commands (Lambda, EDICO…).
+    another editor's commands (Lambda, EDICO…); ``addons`` discovers
+    extensions (True), skips them (False), or takes a ready registry.
     """
     directory = directory or data_dir()
-    catalog = Catalog.load(directory / "elements.json")
+    registry = addons if isinstance(addons, Registry) else (load_addons() if addons else Registry())
+    # Add-on commands become catalogue elements, so key resolution and the
+    # user-level checks treat them exactly like built-in commands.
+    catalog = Catalog(
+        load_table(directory / "elements.json", Element).entries + registry.elements()
+    )
     level: int | None = None
     calculator_allowed = True
     if profile is not None:
@@ -272,9 +297,19 @@ def create_editor(
         if not path.is_file():
             raise ValueError(f"unknown keymap: {keymap!r}")
         key_tables.append(load_table(path, KeyEntry))
+    if registry.key_entries():
+        key_tables.append(
+            Table[KeyEntry](table="keys_addons", version=1, entries=registry.key_entries())
+        )
     glyphs: Table[GlyphEntry] = load_table(directory / "glyphs.json", GlyphEntry)
-    labels: Table[LabelEntry] = load_table(
+    labels_table: Table[LabelEntry] = load_table(
         language_table_path(directory, "labels", language), LabelEntry
+    )
+    labels = Table[LabelEntry](
+        table=labels_table.table,
+        version=labels_table.version,
+        language=labels_table.language,
+        entries=[*labels_table.entries, *registry.label_entries(language)],
     )
     messages_table: Table[MessageEntry] = load_table(
         language_table_path(directory, "messages", language), MessageEntry
@@ -289,4 +324,5 @@ def create_editor(
         messages,
         calculator_allowed=calculator_allowed,
         reader=reader,
+        addons=registry,
     )

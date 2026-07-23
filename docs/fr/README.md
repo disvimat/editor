@@ -11,6 +11,7 @@ dans des fichiers exportables.
 - [Architecture](ARCHITECTURE.md) — comment le projet est construit, et pourquoi.
 - [Tables](TABLES.md) — les données qui régissent le comportement de l'éditeur.
 - [Format de document](DOCUMENT.md) — documents multi-lignes et le format `.dvm`.
+- [Extensions](ADDONS.md) — enrichir l'éditeur sans toucher au noyau.
 - [État](STATUS.md) — ce qui est fait et ce qui manque.
 - [MathCAT](MATHCAT.md) — le moteur externe de parole et de braille.
 
@@ -47,6 +48,7 @@ Deux variables d'environnement configurent les deux interfaces :
 | `DISVIMAT_LANG` | langue de l'interface et de la voix | `en` (par défaut), `es`, `fr` |
 | `DISVIMAT_PROFILE` | profil d'utilisateur (A7) | `beginner`, `intermediate`, `advanced`, `exam` |
 | `DISVIMAT_KEYMAP` | profil clavier — commandes d'un autre éditeur | `lambda`, `edico` (voir `data/keymaps/`) |
+| `DISVIMAT_ADDONS` | dossier de scripts d'extension | un chemin (voir [ADDONS](ADDONS.md)) |
 | `DISVIMAT_DATA` | répertoire des tables | un chemin ; `data/` par défaut |
 
 Sur le web, la langue est aussi un paramètre : `http://127.0.0.1:8000/?language=fr`.

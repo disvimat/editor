@@ -3,8 +3,21 @@
   "version": 1,
   "language": "en",
   "entries": [
-    { "id": "expression_not_computable", "text": "the expression cannot be computed" },
-    { "id": "division_by_zero", "text": "division by zero" },
-    { "id": "calculator_locked", "text": "calculator locked" }
+    {
+      "id": "expression_not_computable",
+      "text": "the expression cannot be computed"
+    },
+    {
+      "id": "division_by_zero",
+      "text": "division by zero"
+    },
+    {
+      "id": "calculator_locked",
+      "text": "calculator locked"
+    },
+    {
+      "id": "addon_failed",
+      "text": "the add-on could not run"
+    }
   ]
 }
