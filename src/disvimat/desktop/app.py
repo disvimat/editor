@@ -377,11 +377,12 @@ class EditorWindow(wx.Frame):
 def main() -> None:
     language = os.environ.get("DISVIMAT_LANG", "en")
     profile = os.environ.get("DISVIMAT_PROFILE")
+    keymap = os.environ.get("DISVIMAT_KEYMAP")
     catalog = Catalog.load(data_dir() / "elements.json")
     outputs = create_outputs(catalog, language)
     app = wx.App()
     window = EditorWindow(
-        create_editor(language=language, profile=profile, reader=outputs.reader),
+        create_editor(language=language, profile=profile, reader=outputs.reader, keymap=keymap),
         outputs.braille,
         UIText.load(language=language),
         language=language,

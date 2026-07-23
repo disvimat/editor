@@ -46,6 +46,7 @@ Deux variables d'environnement configurent les deux interfaces :
 |---|---|---|
 | `DISVIMAT_LANG` | langue de l'interface et de la voix | `en` (par défaut), `es`, `fr` |
 | `DISVIMAT_PROFILE` | profil d'utilisateur (A7) | `beginner`, `intermediate`, `advanced`, `exam` |
+| `DISVIMAT_KEYMAP` | profil clavier — commandes d'un autre éditeur | `lambda`, `edico` (voir `data/keymaps/`) |
 | `DISVIMAT_DATA` | répertoire des tables | un chemin ; `data/` par défaut |
 
 Sur le web, la langue est aussi un paramètre : `http://127.0.0.1:8000/?language=fr`.

@@ -192,6 +192,23 @@ class Catalog:
         return [element for element in self if element.type is element_type]
 
 
+def keymap_path(directory: Path, keymap: str) -> Path:
+    """Path of a keyboard profile (``data/keymaps/<name>.json``).
+
+    Keymaps let the editor answer to the same key strokes as another
+    editor (Lambda, EDICO…), so a user can migrate without relearning.
+    """
+    return directory / "keymaps" / f"{keymap}.json"
+
+
+def available_keymaps(directory: Path) -> list[str]:
+    """The keyboard profiles shipped in the data directory, sorted."""
+    folder = directory / "keymaps"
+    if not folder.is_dir():
+        return []
+    return sorted(path.stem for path in folder.glob("*.json"))
+
+
 def language_table_path(directory: Path, name: str, language: str) -> Path:
     """Path of a language-dependent table, falling back to the reference one.
 
