@@ -7,7 +7,7 @@ and letters are grouped into ``<mn>`` and ``<mi>``.
 
 import xml.etree.ElementTree as ET
 
-from disvimat.core.document import Character, Node, Sign, Structure
+from disvimat.core.document import Character, Matrix, Node, Sign, Structure
 from disvimat.core.tables import Catalog
 
 MATHML_NS = "http://www.w3.org/1998/Math/MathML"
@@ -74,6 +74,8 @@ class XHTMLExporter:
                 if symbol is None:
                     raise ValueError(f"sign {node.element_id!r} has no unicode")
                 ET.SubElement(parent, "mo").text = symbol
+            elif isinstance(node, Matrix):
+                self._matrix(parent, node)
             else:
                 self._structure(parent, node)
             index += 1
@@ -105,6 +107,15 @@ class XHTMLExporter:
             return
         for slot in structure.slots:
             self._slot(container, slot)
+
+    def _matrix(self, parent: ET.Element, matrix: Matrix) -> None:
+        """Export a matrix as MathML ``<mtable><mtr><mtd>…``."""
+        table = ET.SubElement(parent, "mtable")
+        for row in range(matrix.rows):
+            tr = ET.SubElement(table, "mtr")
+            for col in range(matrix.cols):
+                td = ET.SubElement(tr, "mtd")
+                self._fill(td, matrix.cell(row, col))
 
     def _slot(self, parent: ET.Element, nodes: list[Node]) -> None:
         """A slot is a single child: wrapped in ``<mrow>`` when needed."""

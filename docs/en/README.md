@@ -83,6 +83,8 @@ every language and in both interfaces.
 | `Ctrl+L` / `Ctrl+Shift+L` | Read the element / the whole line |
 | `Ctrl+Enter` | Calculate the result |
 | `Ctrl+I` / `Ctrl+E` | Import / export XHTML (desktop) |
+| `Ctrl+Shift+M` | Insert a matrix |
+| `Alt+Down` / `Alt+Right` | Add a matrix row / column |
 | `Ctrl+6` | Braille window (desktop) |
 
 The numeric keypad also carries `+`, `−`, `×` and `÷` (the latter inserts a

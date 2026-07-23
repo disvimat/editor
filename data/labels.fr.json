@@ -58,6 +58,13 @@
     { "id": "redo", "label": "rétablir" },
     { "id": "read_element", "label": "lire l'élément" },
     { "id": "read_line", "label": "lire la ligne" },
-    { "id": "calculate", "label": "résultat" }
+    { "id": "calculate", "label": "résultat" },
+    {
+      "id": "matrix",
+      "label": "matrice",
+      "parts": { "start": "matrice", "separator": "ligne suivante", "end": "fin de matrice" }
+    },
+    { "id": "matrix_add_row", "label": "ajouter une ligne" },
+    { "id": "matrix_add_column", "label": "ajouter une colonne" }
   ]
 }

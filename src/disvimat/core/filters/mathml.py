@@ -9,9 +9,12 @@ README's "provision for new signs" is still to come).
 
 import xml.etree.ElementTree as ET
 
-from disvimat.core.document import Character, Node, Sign, Structure
+from disvimat.core.document import Character, Matrix, Node, Sign, Structure
 from disvimat.core.elements import ElementType
 from disvimat.core.tables import Catalog
+
+#: Catalogue id of the matrix element (the insert command / node id).
+MATRIX_ID = "matrix"
 
 
 class FilterError(ValueError):
@@ -81,6 +84,8 @@ class MathMLFilter:
         if name == "msqrt":
             # msqrt has no slot wrapper: its children are the content
             return [self._structure(name, [self._sequence(element)])]
+        if name in ("mtable", "mtr"):
+            return [self._matrix(element)]
         catalog_element = self._structures_by_mathml.get(name)
         if catalog_element is None:
             raise FilterError(f"MathML element with no correspondence: <{name}>")
@@ -90,6 +95,27 @@ class MathMLFilter:
                 f"<{name}> has {len(children)} children but {catalog_element.arity} were expected"
             )
         return [self._structure(name, [self._nodes(child) for child in children])]
+
+    def _matrix(self, table: ET.Element) -> Matrix:
+        """Read a ``<mtable>`` (rows of ``<mtd>``) into a Matrix node."""
+        rows = [row for row in table if _local_name(row) == "mtr"]
+        cells: list[list[Node]] = []
+        cols = 0
+        for row in rows:
+            row_cells = [self._sequence(cell) for cell in row if _local_name(cell) == "mtd"]
+            cols = max(cols, len(row_cells))
+            cells.extend(row_cells)
+        # Pad short rows so the grid is rectangular.
+        if rows and cols:
+            padded: list[list[Node]] = []
+            index = 0
+            for row in rows:
+                width = sum(1 for cell in row if _local_name(cell) == "mtd")
+                padded.extend(cells[index : index + width])
+                padded.extend([[] for _ in range(cols - width)])
+                index += width
+            cells = padded
+        return Matrix(MATRIX_ID, rows=len(rows), cols=cols, slots=cells)
 
     def _structure(self, mathml_name: str, slots: list[list[Node]]) -> Structure:
         element = self._structures_by_mathml.get(mathml_name)

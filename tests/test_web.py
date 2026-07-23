@@ -123,6 +123,13 @@ def test_opening_bad_dvm_gives_400(client: TestClient) -> None:
     assert response.status_code == 400
 
 
+def test_matrix_renders_as_mathml_table(client: TestClient) -> None:
+    session = new_session(client)
+    view = send(client, session, "Ctrl+Shift+M")  # insert a matrix
+    assert view["text"] == "[□,□;□,□]"
+    assert "<mtable>" in view["mathml"]
+
+
 def test_unknown_session_gives_404(client: TestClient) -> None:
     response = client.post("/api/session/nonexistent/key", json={"keys": "1", "character": "1"})
     assert response.status_code == 404

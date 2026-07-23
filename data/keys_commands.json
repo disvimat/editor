@@ -17,6 +17,9 @@
     { "id": "redo", "keys": "Ctrl+Y" },
     { "id": "read_element", "keys": "Ctrl+L" },
     { "id": "read_line", "keys": "Ctrl+Shift+L" },
-    { "id": "calculate", "keys": "Ctrl+Return" }
+    { "id": "calculate", "keys": "Ctrl+Return" },
+    { "id": "matrix", "keys": "Ctrl+Shift+M" },
+    { "id": "matrix_add_row", "keys": "Alt+Down" },
+    { "id": "matrix_add_column", "keys": "Alt+Right" }
   ]
 }

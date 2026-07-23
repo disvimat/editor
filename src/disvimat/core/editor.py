@@ -12,7 +12,7 @@ from pathlib import Path
 
 from disvimat.core.addons import MSG_ADDON_FAILED, Registry, load_addons
 from disvimat.core.calculator import CalculationError, Calculator
-from disvimat.core.document import Character, Document, Node, Sign, Structure
+from disvimat.core.document import Character, Document, Matrix, Node, Sign, Structure
 from disvimat.core.elements import SLOT_ID, Element, ElementType
 from disvimat.core.keyboard import Keyboard
 from disvimat.core.output import ExpressionReader
@@ -88,6 +88,9 @@ class Editor:
             "read_element": self._read_current,
             "read_line": self._cmd_read_line,
             "calculate": self._cmd_calculate,
+            "matrix": self._cmd_matrix,
+            "matrix_add_row": self._cmd_matrix_add_row,
+            "matrix_add_column": self._cmd_matrix_add_column,
         }
         # Add-on commands join the same dispatch table, so they behave like
         # built-in ones — key resolution, speech and undo included.
@@ -167,24 +170,62 @@ class Editor:
         return self._speaker.label("line_end")
 
     def _cmd_enter(self) -> str:
-        structure = self.document.enter()
-        if structure is not None:
+        # Inside a matrix, Down moves to the cell below.
+        if self.document.current_matrix() is not None:
+            if self.document.move_in_matrix(1, 0) is not None:
+                return self._announce_cell()
+            return self._read_current()
+        container = self.document.enter()
+        if container is not None:
             label = self._speaker.label("enter_structure")
-            return f"{label}: {self._speaker.label(structure.element_id)}"
+            return f"{label}: {self._speaker.label(container.element_id)}"
         # At the top level, Down moves to the next document line.
         if self.document.line_down():
             return self._cmd_read_line()
         return self._read_current()
 
     def _cmd_exit(self) -> str:
-        structure = self.document.exit()
-        if structure is not None:
+        # Inside a matrix, Up moves to the cell above; from the top row it
+        # leaves the matrix.
+        if self.document.current_matrix() is not None:
+            if self.document.move_in_matrix(-1, 0) is not None:
+                return self._announce_cell()
+            self.document.exit()
+            return self._read_current()
+        container = self.document.exit()
+        if container is not None:
             label = self._speaker.label("exit_structure")
-            return f"{label}: {self._speaker.label(structure.element_id)}"
+            return f"{label}: {self._speaker.label(container.element_id)}"
         # At the top level, Up moves to the previous document line.
         if self.document.line_up():
             return self._cmd_read_line()
         return self._read_current()
+
+    def _cmd_matrix(self) -> str:
+        """Insert a 2x2 matrix and enter its first cell."""
+        self.document.insert(Matrix("matrix", rows=2, cols=2, slots=[[], [], [], []]))
+        return f"{self._speaker.label('matrix')}, {self._announce_cell()}"
+
+    def _cmd_matrix_add_row(self) -> str:
+        if not self.document.matrix_add_row():
+            return self._read_current()
+        return self._speaker.label("matrix_add_row")
+
+    def _cmd_matrix_add_column(self) -> str:
+        if not self.document.matrix_add_column():
+            return self._read_current()
+        return self._speaker.label("matrix_add_column")
+
+    def _announce_cell(self) -> str:
+        """Speak the current matrix cell position, then read its content."""
+        cell = self.document.cursor_cell()
+        if cell is None:
+            return self._read_current()
+        row, column = cell
+        position = self._message("matrix_cell")
+        position = position.replace("{row}", str(row + 1)).replace("{column}", str(column + 1))
+        content = self._speaker.sequence(self.document.current_sequence())
+        return f"{position}: {content}"
 
     def _cmd_new_line(self) -> str:
         if not self.document.new_line():
@@ -192,13 +233,16 @@ class Editor:
         return self._speaker.label("new_line")
 
     def _cmd_next_slot(self) -> str:
-        structure = self.document.current_structure()
-        if structure is None:
+        container = self.document.current_container()
+        if container is None:
             return self._read_current()
+        in_matrix = self.document.current_matrix() is not None
         slot_number = self.document.next_slot()
         if slot_number is None:
             label = self._speaker.label("exit_structure")
-            return f"{label}: {self._speaker.label(structure.element_id)}"
+            return f"{label}: {self._speaker.label(container.element_id)}"
+        if in_matrix:
+            return self._announce_cell()
         return f"{self._speaker.label(SLOT_ID)} {slot_number + 1}"
 
     def _cmd_delete(self) -> str:

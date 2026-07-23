@@ -84,6 +84,8 @@ donc identiques dans toutes les langues et dans les deux interfaces.
 | `Ctrl+L` / `Ctrl+Shift+L` | Lire l'élément / toute la ligne |
 | `Ctrl+Entrée` | Calculer le résultat |
 | `Ctrl+I` / `Ctrl+E` | Importer / exporter du XHTML (bureau) |
+| `Ctrl+Maj+M` | Insérer une matrice |
+| `Alt+Bas` / `Alt+Droite` | Ajouter ligne / colonne |
 | `Ctrl+6` | Fenêtre braille (bureau) |
 
 Le pavé numérique porte aussi `+`, `−`, `×` et `÷` (ce dernier insère une

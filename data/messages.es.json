@@ -18,6 +18,10 @@
     {
       "id": "addon_failed",
       "text": "el complemento no pudo ejecutarse"
+    },
+    {
+      "id": "matrix_cell",
+      "text": "fila {row} columna {column}"
     }
   ]
 }

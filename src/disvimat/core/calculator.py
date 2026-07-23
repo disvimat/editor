@@ -84,6 +84,8 @@ class Calculator:
                     continue
                 raise CalculationError(MSG_NOT_COMPUTABLE)
             flush_number()
+            if not isinstance(node, Structure):
+                raise CalculationError(MSG_NOT_COMPUTABLE)  # a matrix is not a value
             tokens.append(("number", self._structure(node)))
         flush_number()
         return tokens

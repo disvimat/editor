@@ -58,6 +58,13 @@
     { "id": "redo", "label": "redo" },
     { "id": "read_element", "label": "read element" },
     { "id": "read_line", "label": "read line" },
-    { "id": "calculate", "label": "result" }
+    { "id": "calculate", "label": "result" },
+    {
+      "id": "matrix",
+      "label": "matrix",
+      "parts": { "start": "matrix", "separator": "next row", "end": "end of matrix" }
+    },
+    { "id": "matrix_add_row", "label": "add row" },
+    { "id": "matrix_add_column", "label": "add column" }
   ]
 }
