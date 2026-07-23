@@ -17,6 +17,10 @@ dependencies = [
 [project.optional-dependencies]
 desktop = [
     "wxPython>=4.2",
+    # Speaks through the user's screen reader (NVDA, JAWS) or SAPI. Without
+    # it the editor still runs, but only shows its feedback in the status
+    # bar, which a screen reader does not read on its own.
+    "accessible_output2>=0.14",
 ]
 web = [
     "fastapi>=0.110",
@@ -63,7 +67,7 @@ files = ["src"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["wx", "wx.*", "uvicorn"]
+module = ["wx", "wx.*", "uvicorn", "accessible_output2.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -41,7 +41,7 @@ tablas, módulos A10/B7).
 |---|---|---|
 | B1 tabla de glifos | **hecho** | Con plantillas lineales para estructuras |
 | B2 etiquetas / verbalización por idioma | **hecho** | Voz de edición en inglés, español y francés (nuestras tablas); lectura de la expresión completa vía [MathCAT](MATHCAT.md) en inglés y español |
-| B3 br8 (NVDA y líneas braille) | **pendiente** | Necesita un add-on de NVDA propio; el de MathCAT es la referencia |
+| B3 br8 (NVDA y líneas braille) | **parcial** | El escritorio habla cada acción por el lector de pantalla y envía la línea actual a la línea braille conectada, mediante el controlador de NVDA/JAWS (`accessible_output2`). Falta la *entrada* BR8 y un add-on propio |
 | B4 ventana de presentación gráfica | **hecho** | Control de texto nativo (escritorio) y MathML nativo (web) |
 | B5 transcriptor braille | **hecho (motores externos)** | El braille sale de una escalera ([BRAILLE.md](BRAILLE.md)): [MathCAT](MATHCAT.md) para matemáticas (CMU, UEB), [liblouis](BRAILLE.md) para texto (tablas oficiales, p. ej. francés), nuestras tablas `br6` como último recurso. Verificado en Python 3.13 de 64 bits |
 | B6 ventana br6 | **parcial** | La ventana muestra y sigue la transcripción; falta navegar *dentro* de la ventana braille |
@@ -100,9 +100,10 @@ No están en la lista original de módulos, pero importan para el uso real:
    **multilínea** — `Intro` crea línea, las flechas se mueven entre líneas
    en el nivel superior, y cada línea se presenta, se lee y se transcribe
    por separado.
-3. **No hay add-on de NVDA**, así que la voz depende de la línea de estado
-   (escritorio) y de la región `aria-live` (web), en vez de hablar
-   directamente.
+3. ~~No hay add-on de NVDA, así que la voz depende de la línea de estado.~~
+   **Corregido:** el escritorio ya habla cada acción por el lector de
+   pantalla y envía braille a la línea. Sigue faltando un add-on propio
+   para la *entrada* por teclado BR8 (E1).
 4. **Las sesiones web viven en memoria** y desaparecen al reiniciar el
    proceso; no hay autenticación ni persistencia.
 5. **El braille necesita validación experta.** El motor está terminado; los

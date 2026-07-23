@@ -18,6 +18,7 @@ from disvimat.core.filters.mathml import FilterError, MathMLFilter
 from disvimat.core.output import BrailleProvider
 from disvimat.core.tables import Catalog, data_dir
 from disvimat.core.ui_text import UIText
+from disvimat.desktop.screen_reader import SpeechOutput, create_output
 from disvimat.export.xhtml import XHTMLExporter
 
 #: Special keys -> canonical table name.
@@ -38,6 +39,18 @@ _SPECIAL_KEYS = {
     wx.WXK_NUMPAD_MULTIPLY: "NumMultiply",
     wx.WXK_NUMPAD_DIVIDE: "NumDivide",
 }
+
+
+def _finished_word(result: Result) -> str:
+    """The word the user has just closed with a space, if any.
+
+    Screen readers announce typed characters but not the word being
+    completed, which is what a writer wants to hear when pressing space.
+    """
+    before = result.text[: result.position].rstrip()
+    if not before:
+        return ""
+    return before.split()[-1]
 
 
 def canonical_keys(event: wx.KeyEvent) -> str | None:
@@ -92,6 +105,7 @@ class EditorWindow(wx.Frame):
         profile: str | None = None,
         speech_backend: str = "tables",
         braille_backend: str = "none",
+        speech: SpeechOutput | None = None,
     ) -> None:
         super().__init__(None, title=text("app_title"))
         self._editor = editor
@@ -99,6 +113,9 @@ class EditorWindow(wx.Frame):
         self._text = text
         self._language = language
         self._profile = profile
+        # The screen reader does not read the status bar by itself, so every
+        # action is spoken here as well as shown.
+        self._speech: SpeechOutput = speech if speech is not None else create_output()
         self._speech_backend = speech_backend
         self._braille_backend = braille_backend
         self._braille: BrailleWindow | None = None
@@ -133,19 +150,31 @@ class EditorWindow(wx.Frame):
             return
         character = chr(code)
         result = self._editor.press(character)
-        if result is None and (character.isalnum() or character == " "):
-            result = self._editor.type_character(character)
-        if result is not None:
+        if result is not None:  # an assigned sign or structure
             self._apply(result)
-        else:
-            event.Skip()
+            return
+        if character.isalnum() or character == " ":
+            typed = self._editor.type_character(character)
+            # The screen reader echoes typed characters itself, so repeating
+            # them would double up. What it cannot know is the word the user
+            # has just finished, which is announced when space closes it.
+            self._apply(typed, speak=_finished_word(typed) if character == " " else "")
+            return
+        event.Skip()
 
-    def _apply(self, result: Result) -> None:
+    def _apply(self, result: Result, *, speak: str | None = None) -> None:
+        """Reflect a result. ``speak`` overrides the spoken text ("" silences)."""
         self._document.ChangeValue(result.text)
         self._document.SetInsertionPoint(result.position)
         self.SetStatusText(result.speech)
+        spoken = result.speech if speak is None else speak
+        if spoken:
+            self._speech.speak(spoken)
         if self._braille is not None and self._braille.IsShown() and self._transcriber:
             self._braille.show_braille(self._braille_text())
+        if self._transcriber is not None:
+            # Also push the current line to a connected braille display.
+            self._speech.braille(self._transcriber.unicode(self._editor.document.current_line()))
 
     def _braille_text(self) -> str:
         """Braille of the whole document, one line per document line."""

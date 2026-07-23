@@ -41,7 +41,7 @@ tables, modules A10/B7).
 |---|---|---|
 | B1 glyph table | **done** | With linear templates for structures |
 | B2 labels / speech per language | **done** | Editing feedback in English, Spanish, French (our tables); whole-expression reading via [MathCAT](MATHCAT.md) for English and Spanish |
-| B3 br8 (NVDA and braille displays) | **pending** | Needs a dedicated NVDA add-on; MathCAT's own add-on is the reference |
+| B3 br8 (NVDA and braille displays) | **partial** | The desktop speaks every action through the screen reader and pushes the current line to a connected braille display, via the NVDA/JAWS controller (`accessible_output2`). BR8 *input* and a dedicated add-on are still pending |
 | B4 graphical presentation window | **done** | Native text control (desktop) and native MathML (web) |
 | B5 braille transcriber | **done (external engines)** | Braille comes from a ladder ([BRAILLE.md](BRAILLE.md)): [MathCAT](MATHCAT.md) for math (CMU, UEB), [liblouis](BRAILLE.md) for text (official tables, e.g. French), our `br6` tables as last resort. Verified on 64-bit Python 3.13 |
 | B6 br6 window | **partial** | The window shows and follows the transcription; navigating *inside* the braille window is not implemented |
@@ -99,8 +99,10 @@ These are not in the original module list but matter for real use:
 2. ~~A document is a single line.~~ **Done:** documents are now
    **multi-line** — `Return` starts a line, arrow keys move between lines at
    the top level, and each line renders, speaks and brailles on its own.
-3. **No NVDA add-on**, so speech relies on the status line (desktop) and on
-   the `aria-live` region (web), instead of speaking directly.
+3. ~~No NVDA add-on, so speech relies on the status line.~~ **Fixed:** the
+   desktop now speaks every action through the screen reader and sends
+   braille to the display. A dedicated add-on is still needed for BR8
+   keyboard *input* (E1).
 4. **Web sessions live in memory** and disappear when the process restarts;
    there is no authentication or persistence.
 5. **Braille needs expert validation.** The engine is finished, the values
