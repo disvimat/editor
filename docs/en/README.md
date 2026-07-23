@@ -49,6 +49,17 @@ Two environment variables configure both interfaces:
 
 On the web the language is also a query parameter: `http://127.0.0.1:8000/?language=fr`.
 
+## Speech and the screen reader
+
+The editor **speaks every action** through your screen reader (NVDA, JAWS)
+or SAPI: the sign or structure inserted, the blank you moved to, the result
+of a calculation, and the word you finish when you press space. It also
+pushes the current line to a connected braille display.
+
+That needs `accessible_output2`, which the `[desktop]` extra installs. If it
+is missing the editor still works, but the feedback only appears in the
+status bar — which a screen reader does not read on its own.
+
 ## Keys
 
 Key names are canonical and never translated, so they are the same in

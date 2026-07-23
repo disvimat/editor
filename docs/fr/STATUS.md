@@ -42,7 +42,7 @@ bidimensionnelles** (matrices et tableaux, modules A10/B7).
 |---|---|---|
 | B1 table de glyphes | **fait** | Avec gabarits linéaires pour les structures |
 | B2 étiquettes / oralisation par langue | **fait** | Voix d'édition en anglais, espagnol et français (nos tables) ; lecture de l'expression entière via [MathCAT](MATHCAT.md) en anglais et espagnol |
-| B3 br8 (NVDA et afficheurs braille) | **à faire** | Nécessite un module complémentaire NVDA dédié ; celui de MathCAT est la référence |
+| B3 br8 (NVDA et afficheurs braille) | **partiel** | Le bureau oralise chaque action via le lecteur d'écran et envoie la ligne courante à l'afficheur braille connecté, par le contrôleur NVDA/JAWS (`accessible_output2`). La *saisie* BR8 et un module dédié restent à faire |
 | B4 fenêtre de présentation graphique | **fait** | Contrôle texte natif (bureau) et MathML natif (web) |
 | B5 transcripteur braille | **fait (moteurs externes)** | Le braille provient d'une échelle ([BRAILLE.md](BRAILLE.md)) : [MathCAT](MATHCAT.md) pour les mathématiques (CMU, UEB), [liblouis](BRAILLE.md) pour le texte (tables officielles, p. ex. français), nos tables `br6` en dernier recours. Vérifié sous Python 3.13 64 bits |
 | B6 fenêtre br6 | **partiel** | La fenêtre affiche et suit la transcription ; la navigation *à l'intérieur* de la fenêtre braille manque |
@@ -102,9 +102,10 @@ un usage réel :
    désormais **multi-lignes** — `Entrée` crée une ligne, les flèches
    passent d'une ligne à l'autre au niveau supérieur, et chaque ligne est
    présentée, lue et braillée séparément.
-3. **Pas de module complémentaire NVDA** : la voix repose donc sur la barre
-   d'état (bureau) et sur la région `aria-live` (web), au lieu de parler
-   directement.
+3. ~~Pas de module NVDA : la voix repose sur la barre d'état.~~ **Corrigé :**
+   le bureau oralise désormais chaque action via le lecteur d'écran et
+   envoie le braille à l'afficheur. Un module dédié reste nécessaire pour
+   la *saisie* au clavier BR8 (E1).
 4. **Les sessions web vivent en mémoire** et disparaissent au redémarrage
    du processus ; il n'y a ni authentification ni persistance.
 5. **Le braille demande une validation experte.** Le moteur est terminé,

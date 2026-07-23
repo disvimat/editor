@@ -49,6 +49,17 @@ Dos variables de entorno configuran ambas interfaces:
 
 En la web el idioma también es un parámetro: `http://127.0.0.1:8000/?language=es`.
 
+## La voz y el lector de pantalla
+
+El editor **habla cada acción** a través de su lector de pantalla (NVDA,
+JAWS) o de SAPI: el signo o la estructura insertados, el hueco al que se ha
+movido, el resultado de un cálculo y la palabra que termina al pulsar
+espacio. Además envía la línea actual a la línea braille conectada.
+
+Para ello hace falta `accessible_output2`, que instala el extra
+`[desktop]`. Si falta, el editor sigue funcionando, pero la información solo
+aparece en la barra de estado, que el lector de pantalla no lee por sí solo.
+
 ## Teclas
 
 Los nombres de tecla son canónicos y no se traducen nunca, así que son los

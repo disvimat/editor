@@ -50,6 +50,17 @@ Deux variables d'environnement configurent les deux interfaces :
 
 Sur le web, la langue est aussi un paramètre : `http://127.0.0.1:8000/?language=fr`.
 
+## La parole et le lecteur d'écran
+
+L'éditeur **oralise chaque action** via votre lecteur d'écran (NVDA, JAWS)
+ou SAPI : le signe ou la structure insérés, la case atteinte, le résultat
+d'un calcul et le mot terminé par une espace. Il envoie aussi la ligne
+courante à l'afficheur braille connecté.
+
+Cela nécessite `accessible_output2`, installé par l'extra `[desktop]`. S'il
+manque, l'éditeur fonctionne toujours, mais le retour n'apparaît que dans la
+barre d'état, que le lecteur d'écran ne lit pas de lui-même.
+
 ## Touches
 
 Les noms de touches sont canoniques et ne sont jamais traduits : ils sont
