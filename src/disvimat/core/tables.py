@@ -192,6 +192,22 @@ class Catalog:
         return [element for element in self if element.type is element_type]
 
 
+#: Environment override for the user's personal keymap file.
+USER_KEYMAP_ENV = "DISVIMAT_USER_KEYMAP"
+
+
+def user_keymap_path() -> Path:
+    """The file that holds the user's own key reassignments.
+
+    ``$DISVIMAT_USER_KEYMAP`` wins; otherwise ``~/.disvimat/user_keys.json``.
+    The file may not exist — the editor simply ignores it when absent.
+    """
+    override = os.environ.get(USER_KEYMAP_ENV)
+    if override:
+        return Path(override)
+    return Path.home() / ".disvimat" / "user_keys.json"
+
+
 def keymap_path(directory: Path, keymap: str) -> Path:
     """Path of a keyboard profile (``data/keymaps/<name>.json``).
 

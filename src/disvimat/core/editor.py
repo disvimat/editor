@@ -14,7 +14,7 @@ from disvimat.core.addons import MSG_ADDON_FAILED, Registry, load_addons
 from disvimat.core.calculator import CalculationError, Calculator
 from disvimat.core.document import Character, Document, Matrix, Node, Sign, Structure
 from disvimat.core.elements import SLOT_ID, Element, ElementType
-from disvimat.core.keyboard import Keyboard
+from disvimat.core.keyboard import Keyboard, State
 from disvimat.core.output import ExpressionReader
 from disvimat.core.presentation import Presenter
 from disvimat.core.speech import Speaker
@@ -30,6 +30,7 @@ from disvimat.core.tables import (
     keymap_path,
     language_table_path,
     load_table,
+    user_keymap_path,
 )
 
 #: Message id of the teacher's lock (A9); it lives in the messages table.
@@ -111,9 +112,20 @@ class Editor:
 
     # --- API for the interfaces ---------------------------------------------
 
+    def chord_pending(self) -> bool:
+        """Whether a multi-stroke chord is waiting for its next stroke."""
+        return self._keyboard.pending
+
     def press(self, keys: str) -> Result | None:
-        """Run the key stroke from the tables; None when it is unassigned."""
-        element = self._keyboard.resolve(keys)
+        """Run the key stroke from the tables; None when it is unassigned.
+
+        Returns a :class:`Result` with empty speech while a chord is still
+        being entered (the stroke is consumed but nothing happens yet).
+        """
+        outcome = self._keyboard.feed(keys)
+        if outcome.state is State.PENDING:
+            return self._result("")  # consumed; waiting for the next stroke
+        element = outcome.element
         if element is None:
             return None
         if element.type is ElementType.COMMAND:
@@ -303,6 +315,7 @@ def create_editor(
     reader: ExpressionReader | None = None,
     keymap: str | None = None,
     addons: Registry | bool = True,
+    user_keymap: Path | None = None,
 ) -> Editor:
     """Build an editor loading every table from the data directory.
 
@@ -345,6 +358,11 @@ def create_editor(
         key_tables.append(
             Table[KeyEntry](table="keys_addons", version=1, entries=registry.key_entries())
         )
+    # The user's own reassignments load last, so they win over everything
+    # (defaults, compatibility profile, add-ons). See disvimat.tools.rebind.
+    user_path = user_keymap or user_keymap_path()
+    if user_path is not None and user_path.is_file():
+        key_tables.append(load_table(user_path, KeyEntry))
     glyphs: Table[GlyphEntry] = load_table(directory / "glyphs.json", GlyphEntry)
     labels_table: Table[LabelEntry] = load_table(
         language_table_path(directory, "labels", language), LabelEntry

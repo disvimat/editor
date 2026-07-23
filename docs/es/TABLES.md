@@ -60,6 +60,35 @@ Edite el valor `keys` en la tabla correspondiente. Los nombres son
 canónicos (`Ctrl+F`, `Left`, `NumAdd`) y son los mismos en escritorio y
 web. Los tests rechazan una pulsación asignada dos veces.
 
+Una pulsación puede ser un **acorde**: una secuencia separada por comas como
+`"Ctrl+G, P"` (la convención que usa EdiCo para letras griegas y títulos).
+La primera pulsación deja el teclado a la espera; la siguiente la completa.
+Un acorde y una asignación simple no pueden solaparse: `"Ctrl+G"` y
+`"Ctrl+G, P"` juntas se rechazan, porque tras `Ctrl+G` el editor solo puede
+hacer una cosa.
+
+### Reasignar una tecla como usuario, sin conflictos
+
+El usuario no edita las tablas de fábrica. Sus reasignaciones personales
+viven en un mapa de teclas que el editor carga **el último**, de modo que
+una asignación del usuario gana sobre las de fábrica, sobre un perfil de
+compatibilidad (Lambda, EdiCo) y sobre los add-ons. El archivo es
+`$DISVIMAT_USER_KEYMAP` o `~/.disvimat/user_keys.json`.
+
+La herramienta `rebind` lo edita con seguridad:
+
+```bash
+python -m disvimat.tools.rebind show "Ctrl+F"      # qué hace una pulsación
+python -m disvimat.tools.rebind set fraction "Ctrl+B"
+python -m disvimat.tools.rebind clear fraction
+python -m disvimat.tools.rebind list
+```
+
+Antes de guardar, **rechaza** una asignación que no puede funcionar (un
+comando inexistente, o un acorde que ensombrecería a otro) y **avisa**
+cuando la nueva pulsación ya la usaba otro comando, nombrando al que la
+pierde, para que una reasignación sea deliberada y nunca silenciosa.
+
 ### Añadir un idioma
 
 Copie `labels.en.json`, `messages.en.json` y `ui.en.json` con el código de
