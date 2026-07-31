@@ -239,12 +239,17 @@ def language_table_path(directory: Path, name: str, language: str) -> Path:
 
 
 def data_dir() -> Path:
-    """Table directory: ``$DISVIMAT_DATA`` or the project's ``data/``.
+    """Table directory, in order: ``$DISVIMAT_DATA``, packaged, checkout.
 
-    Resolving relative to the code serves the editable development
-    install; packaged applications should set the environment variable.
+    An installed application (wheel, frozen ``.exe``) carries the tables
+    inside the package; a development checkout has them at the repository
+    root. Trying the packaged copy first means neither case needs the
+    environment variable, which stays available to point at edited tables.
     """
     from_environment = os.environ.get("DISVIMAT_DATA")
     if from_environment:
         return Path(from_environment)
+    packaged = Path(__file__).resolve().parents[1] / "data"
+    if packaged.is_dir():
+        return packaged
     return Path(__file__).resolve().parents[3] / "data"

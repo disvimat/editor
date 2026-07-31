@@ -50,6 +50,11 @@ disvimat-web = "disvimat.web.app:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/disvimat"]
+# The JSON tables are the application's behaviour, not optional extras, so
+# they travel inside the installed package. They stay at the repository root
+# (easy to edit and diff) and are copied in at build time; `data_dir()`
+# prefers the packaged copy and falls back to the checkout for development.
+force-include = { "data" = "disvimat/data" }
 
 [tool.ruff]
 line-length = 100
