@@ -9,6 +9,7 @@ const line = document.getElementById("line");
 const status = document.getElementById("status");
 const announcement = document.getElementById("announcement");
 const language = document.body.dataset.language || "en";
+const sessionExpired = document.body.dataset.sessionExpired || "";
 
 let session = null;
 // Send queue: chains requests so the order of key strokes is preserved
@@ -39,12 +40,16 @@ function canonicalKeys(event) {
   return modifiers.length ? [...modifiers, name].join("+") : name;
 }
 
-function paint(view) {
+// ``message`` overrides the speech that comes with the view, so a single
+// announcement reaches the live region (announcing twice in a row makes the
+// synthesiser skip or clip the first one).
+function paint(view, message) {
   session = view.session;
   math.innerHTML = view.mathml || "";
   paintLine(view.text, view.position);
-  status.textContent = view.speech;
-  announce(view.speech);
+  const speech = message === undefined ? view.speech : message;
+  status.textContent = speech;
+  announce(speech);
 }
 
 // Announce in the live region. Clearing and setting again (on a timer,
@@ -64,20 +69,45 @@ function paintLine(text, position) {
   line.append(document.createTextNode(text.slice(position)));
 }
 
+// The session timed out on the server, or the server was restarted.
+class SessionGone extends Error {}
+
 async function request(url, options) {
   const response = await fetch(url, options);
   if (!response.ok) {
     const detail = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(detail.detail || "error");
+    const message = detail.detail || "error";
+    throw response.status === 404 ? new SessionGone(message) : new Error(message);
   }
   return response.json();
+}
+
+function newSession() {
+  return request(`/api/session?language=${encodeURIComponent(language)}`, { method: "POST" });
+}
+
+// Errors only reach the status bar, which is deliberately not a live region
+// — so on its own it is silent. A lost session would therefore leave a
+// screen reader user typing into an editor that has quietly stopped
+// answering: start a fresh session instead and announce it out loud.
+async function handleError(error) {
+  if (error instanceof SessionGone) {
+    try {
+      paint(await newSession(), sessionExpired);
+      return;
+    } catch (failure) {
+      error = failure;
+    }
+  }
+  status.textContent = error.message;
+  announce(error.message);
 }
 
 function start() {
   // The queue starts with session creation: the first key strokes wait for
   // a session instead of being lost.
-  queue = request(`/api/session?language=${encodeURIComponent(language)}`, { method: "POST" })
-    .then(paint)
+  queue = newSession()
+    .then((view) => paint(view))
     .catch((e) => { status.textContent = e.message; });
   return queue;
 }
@@ -90,7 +120,7 @@ function sendKeys(keys, character) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ keys, character }),
     }));
-  }).catch((e) => { status.textContent = e.message; });
+  }).catch(handleError);
   return queue;
 }
 
@@ -130,7 +160,7 @@ document.getElementById("file-dvm").addEventListener("change", async (event) => 
       body: JSON.stringify({ dvm }),
     }));
   } catch (e) {
-    status.textContent = e.message;
+    await handleError(e);
   }
   event.target.value = "";
   editor.focus();
@@ -155,7 +185,7 @@ document.getElementById("file").addEventListener("change", async (event) => {
       body: JSON.stringify({ xhtml }),
     }));
   } catch (e) {
-    status.textContent = e.message;
+    await handleError(e);
   }
   event.target.value = "";
   editor.focus();

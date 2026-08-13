@@ -104,8 +104,13 @@ These are not in the original module list but matter for real use:
    desktop now speaks every action through the screen reader and sends
    braille to the display. A dedicated add-on is still needed for BR8
    keyboard *input* (E1).
-4. **Web sessions live in memory** and disappear when the process restarts;
-   there is no authentication or persistence.
+4. **Web sessions live in memory.** They no longer grow without bound: they
+   expire when idle (`DISVIMAT_SESSION_TTL`, two hours by default) and
+   their number is capped (`DISVIMAT_MAX_SESSIONS`, 500), least recently
+   used discarded first. When a session expires the page opens a new one
+   and **announces it aloud**, so nobody is left typing into an editor that
+   has gone silent. There is still no authentication or persistence: the
+   document is lost when the process restarts.
 5. **Braille needs expert validation.** The engine is finished, the values
    are not: they must be checked against the CBE mathematical braille
    standard before any classroom use.

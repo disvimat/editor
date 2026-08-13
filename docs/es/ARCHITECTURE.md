@@ -70,8 +70,23 @@ la secuencia actual, y siempre está *entre* dos nodos. Como el documento es
 estructural y no textual, moverse por estructuras, seleccionar un numerador
 o transcribir a braille son operaciones naturales, no cirugía de cadenas.
 
-Deshacer y rehacer trabajan con instantáneas del árbol completo: simple,
-correcto y sobradamente rápido para el tamaño de una expresión matemática.
+Deshacer y rehacer trabajan con instantáneas del documento entero, pero una
+instantánea **no copia el árbol**: guarda referencias a las líneas. Una
+pulsación solo cambia una línea, así que la línea que se va a modificar
+recibe una copia privada en ese momento y solo entonces (*copy-on-write*),
+y el resto se comparte con el historial.
+
+Copiar el árbol completo en cada pulsación era simple y correcto mientras un
+documento era una sola expresión; con documentos multilínea hacía que el
+coste de escribir creciera con la longitud del documento, y a partir de unos
+cientos de nodos se nota como retardo al teclear.
+
+La regla que sostiene el diseño: **una línea a la que todavía apunta una
+instantánea no puede modificarse en el sitio**. Por eso los métodos de
+edición llaman a `_edit(...)` *antes* de tomar cualquier referencia a una
+línea, a un hueco o a una matriz. `tests/test_document.py` comprueba el
+invariante —ninguna línea marcada como privada es alcanzable desde una
+instantánea— tras cada operación de una sesión larga y variada.
 
 ## El ciclo de edición
 

@@ -90,6 +90,78 @@ class Document:
         self._cursor = _Cursor()
         self._past: list[tuple[list[Line], _Cursor]] = []
         self._future: list[tuple[list[Line], _Cursor]] = []
+        self._next_revision = 0
+        self._revisions: list[int] = [self._new_revision()]
+        # Per line: whether an undo snapshot still refers to that exact list
+        # object, so changing it must go through a private copy first.
+        self._shared: list[bool] = [False]
+
+    # --- revisions ---------------------------------------------------------
+
+    def revisions(self) -> list[int]:
+        """One revision number per line, for caches keyed on line content.
+
+        Turning a line into MathML, braille or speech is work that only
+        needs redoing when the line changes, but a line is a plain list:
+        nothing about it says whether it was touched. A revision is a
+        number that changes whenever its line's content does, so a
+        presentation layer can cache against it.
+
+        Revisions are **never reused** — not even by undo, which restores
+        content but takes fresh numbers — so a cached rendering can never
+        be served for different content that happens to sit at the same
+        line index.
+
+        The editing methods below keep these current. Code that changes the
+        tree behind the document's back (an add-on reaching into ``lines``)
+        must call :meth:`invalidate`.
+        """
+        return list(self._revisions)
+
+    def invalidate(self) -> None:
+        """Mark every line as changed, for edits made outside this class."""
+        self._revisions = [self._new_revision() for _ in self.lines]
+
+    def _new_revision(self) -> int:
+        self._next_revision += 1
+        return self._next_revision
+
+    def _touch(self, line: int) -> None:
+        """Record that the given line's content changed."""
+        self._revisions[line] = self._new_revision()
+
+    # --- copy on write ------------------------------------------------------
+
+    def _edit(self, *lines: int) -> None:
+        """Prepare to change the given lines: snapshot, unshare, renumber.
+
+        Undo keeps snapshots of the whole document, but a key stroke only
+        ever changes one line, so a snapshot holds *references* to the line
+        objects rather than copies of them (see :meth:`_snapshot`). The
+        price is this rule: a line a snapshot still points at must never be
+        changed in place. Unsharing buys the line a private copy the first
+        time it is edited after a snapshot, and only then.
+
+        **Call this before taking any reference into a line** — a slot
+        list, a matrix, the line itself. Unsharing swaps the line object,
+        so a reference taken earlier would point at the copy the snapshot
+        now owns, and the change would land in the undo history instead of
+        the document.
+        """
+        self._save_snapshot()
+        for line in lines:
+            self._unshare(line)
+            self._touch(line)
+
+    def _unshare(self, line: int) -> None:
+        """Give the line a private copy if a snapshot still refers to it."""
+        if self._shared[line]:
+            self.lines[line] = copy.deepcopy(self.lines[line])
+            self._shared[line] = False
+
+    def _share_all(self) -> None:
+        """Note that every line is now reachable from a snapshot."""
+        self._shared = [True] * len(self.lines)
 
     # --- state ------------------------------------------------------------
 
@@ -170,7 +242,7 @@ class Document:
 
     def insert(self, node: Node) -> None:
         """Insert a node at the cursor; containers are entered at slot 1."""
-        self._save_snapshot()
+        self._edit(self._cursor.line)
         sequence = self.current_sequence()
         sequence.insert(self._cursor.index, node)
         if isinstance(node, Container):
@@ -187,6 +259,10 @@ class Document:
         """Replace the whole document with the given lines; undoable."""
         self._save_snapshot()
         self.lines = lines if lines else [[]]
+        self.invalidate()
+        # The caller may well keep its own references to these lines, so
+        # treat them as shared: the first edit of each buys a private copy.
+        self._share_all()
         last = len(self.lines) - 1
         self._cursor = _Cursor(line=last, index=len(self.lines[last]))
 
@@ -197,11 +273,15 @@ class Document:
         """
         if not self.at_top_level():
             return False
-        self._save_snapshot()
-        line = self.current_line()
+        self._edit(self._cursor.line)
+        line = self.current_line()  # private since _edit; safe to cut
         tail = line[self._cursor.index :]
         del line[self._cursor.index :]
         self.lines.insert(self._cursor.line + 1, tail)
+        # The tail is a brand new list of nodes that are private too, so no
+        # snapshot can reach it: it starts out unshared.
+        self._revisions.insert(self._cursor.line + 1, self._new_revision())
+        self._shared.insert(self._cursor.line + 1, False)
         self._cursor = _Cursor(line=self._cursor.line + 1, index=0)
         return True
 
@@ -209,11 +289,16 @@ class Document:
         """Join the current line onto the previous one (backspace at start)."""
         if not self.at_top_level() or self._cursor.index != 0 or self._cursor.line == 0:
             return False
-        self._save_snapshot()
+        # Both lines have to become private: the nodes of the line that goes
+        # end up inside the line that stays, so leaving the source shared
+        # would hand the snapshot's nodes to the live document.
+        self._edit(self._cursor.line - 1, self._cursor.line)
         previous = self.lines[self._cursor.line - 1]
         join = len(previous)
         previous.extend(self.current_line())
         del self.lines[self._cursor.line]
+        del self._revisions[self._cursor.line]
+        del self._shared[self._cursor.line]
         self._cursor = _Cursor(line=self._cursor.line - 1, index=join)
         return True
 
@@ -225,27 +310,32 @@ class Document:
             or self._cursor.line >= len(self.lines) - 1
         ):
             return False
-        self._save_snapshot()
+        # As in merge_with_previous_line: the nodes of the next line move
+        # into this one, so both must be private first.
+        self._edit(self._cursor.line, self._cursor.line + 1)
         self.current_line().extend(self.lines[self._cursor.line + 1])
         del self.lines[self._cursor.line + 1]
+        del self._revisions[self._cursor.line + 1]
+        del self._shared[self._cursor.line + 1]
         return True
 
     def backspace(self) -> Node | None:
         """Delete the node to the left of the cursor and return it."""
         if self._cursor.index == 0:
             return None
-        self._save_snapshot()
+        self._edit(self._cursor.line)
         sequence = self.current_sequence()
         self._cursor.index -= 1
         return sequence.pop(self._cursor.index)
 
     def delete(self) -> Node | None:
         """Delete the node to the right of the cursor and return it."""
-        sequence = self.current_sequence()
-        if self._cursor.index >= len(sequence):
+        if self._cursor.index >= len(self.current_sequence()):
             return None
-        self._save_snapshot()
-        return sequence.pop(self._cursor.index)
+        self._edit(self._cursor.line)
+        # Read the sequence again: _edit may have swapped in a private copy
+        # of the line, and the old one now belongs to the undo snapshot.
+        return self.current_sequence().pop(self._cursor.index)
 
     # --- navigation -------------------------------------------------------
 
@@ -340,10 +430,13 @@ class Document:
 
     def matrix_add_row(self) -> bool:
         """Add an empty row below the cursor's row (cursor stays in a matrix)."""
-        matrix = self.current_matrix()
-        if matrix is None:
+        if self.current_matrix() is None:
             return False
-        self._save_snapshot()  # the live matrix is untouched by the snapshot
+        self._edit(self._cursor.line)
+        # Find the matrix again: _edit may have replaced the line, and the
+        # matrix found before it would be the snapshot's copy.
+        matrix = self.current_matrix()
+        assert matrix is not None
         row = self._cursor.path[-1][1] // matrix.cols
         at = (row + 1) * matrix.cols
         matrix.slots[at:at] = [[] for _ in range(matrix.cols)]
@@ -352,10 +445,11 @@ class Document:
 
     def matrix_add_column(self) -> bool:
         """Add an empty column after the cursor's column."""
-        matrix = self.current_matrix()
-        if matrix is None:
+        if self.current_matrix() is None:
             return False
-        self._save_snapshot()
+        self._edit(self._cursor.line)
+        matrix = self.current_matrix()  # as above: re-read after unsharing
+        assert matrix is not None
         col = self._cursor.path[-1][1] % matrix.cols
         # Insert one cell after ``col`` in every row, walking backwards so
         # earlier insertions do not shift later positions.
@@ -371,6 +465,7 @@ class Document:
             return False
         self._future.append(self._snapshot())
         self.lines, self._cursor = self._past.pop()
+        self._restored()
         return True
 
     def redo(self) -> bool:
@@ -378,12 +473,40 @@ class Document:
             return False
         self._past.append(self._snapshot())
         self.lines, self._cursor = self._future.pop()
+        self._restored()
         return True
 
+    def _restored(self) -> None:
+        """Settle the bookkeeping after undo or redo put lines back."""
+        # The restored lines may still be referenced by other snapshots —
+        # an untouched line is shared by every snapshot taken while it went
+        # unchanged — so none of them may be edited in place.
+        self._share_all()
+        # And they get fresh revisions rather than reviving old ones, so no
+        # cache can match a rendering to content it was not built from.
+        self.invalidate()
+
     def _snapshot(self) -> tuple[list[Line], _Cursor]:
-        return copy.deepcopy((self.lines, self._cursor))
+        """The state to restore, sharing every line with the document.
+
+        This is a *shallow* copy: a new list holding the same line objects.
+        Deep-copying the whole document on every key stroke made the cost
+        of typing grow with the length of the document, which for a long
+        document is felt as lag. The lines are protected instead by the
+        copy-on-write rule in :meth:`_edit`, so only lines that actually
+        change are ever copied.
+        """
+        cursor = _Cursor(
+            line=self._cursor.line,
+            path=list(self._cursor.path),  # the steps are tuples: immutable
+            index=self._cursor.index,
+        )
+        return list(self.lines), cursor
 
     def _save_snapshot(self) -> None:
         self._past.append(self._snapshot())
         del self._past[: -self.UNDO_LIMIT]
         self._future.clear()
+        # Every line is now reachable from a snapshot, so the next change to
+        # any of them must go through a private copy.
+        self._share_all()

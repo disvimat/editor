@@ -107,8 +107,14 @@ un usage réel :
    le bureau oralise désormais chaque action via le lecteur d'écran et
    envoie le braille à l'afficheur. Un module dédié reste nécessaire pour
    la *saisie* au clavier BR8 (E1).
-4. **Les sessions web vivent en mémoire** et disparaissent au redémarrage
-   du processus ; il n'y a ni authentification ni persistance.
+4. **Les sessions web vivent en mémoire.** Elles ne croissent plus sans
+   limite : elles expirent après inactivité (`DISVIMAT_SESSION_TTL`, deux
+   heures par défaut) et leur nombre est borné (`DISVIMAT_MAX_SESSIONS`,
+   500), la moins récemment utilisée étant écartée. Quand une session
+   expire, la page en ouvre une autre et **l'annonce à voix haute**, pour
+   ne laisser personne saisir dans un éditeur devenu muet. Il n'y a
+   toujours ni authentification ni persistance : le document est perdu au
+   redémarrage du processus.
 5. **Le braille demande une validation experte.** Le moteur est terminé,
    les valeurs ne le sont pas : elles doivent être confrontées à la
    notation mathématique braille de la CBE avant tout usage en classe.

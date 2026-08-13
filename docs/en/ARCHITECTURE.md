@@ -68,8 +68,23 @@ document is structural rather than textual, moving by structure, selecting
 a numerator or transcribing to braille are natural operations instead of
 string surgery.
 
-Undo and redo work on whole-tree snapshots, which is simple, correct and
-fast enough for the size of a mathematical expression.
+Undo and redo work on snapshots of the whole document, but a snapshot
+**does not copy the tree**: it holds references to the lines. A key stroke
+only ever changes one line, so that line gets a private copy at the moment
+it is edited and only then (copy-on-write); every other line is shared with
+the history.
+
+Copying the whole tree on every key stroke was simple and correct while a
+document was a single expression; with multi-line documents it made the
+cost of typing grow with the length of the document, and past a few hundred
+nodes that is felt as lag while typing.
+
+The rule the design rests on: **a line a snapshot still points at must
+never be changed in place**. That is why the editing methods call
+`_edit(...)` *before* taking any reference to a line, a slot or a matrix.
+`tests/test_document.py` checks the invariant — no line marked private is
+reachable from a snapshot — after every operation of a long, varied
+session.
 
 ## The editing cycle
 

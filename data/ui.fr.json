@@ -61,6 +61,10 @@
     { "id": "filter_dvm", "text": "Document DISVIMAT" },
     { "id": "filter_xhtml", "text": "Documents XHTML" },
     { "id": "filter_braille", "text": "Braille Unicode" },
+    {
+      "id": "session_expired",
+      "text": "La session a expiré. Un nouveau document vide a été ouvert."
+    },
     { "id": "error_open", "text": "Impossible d'ouvrir" },
     { "id": "error_import", "text": "Impossible d'importer" },
     { "id": "status_exported", "text": "Exporté : {path}" },

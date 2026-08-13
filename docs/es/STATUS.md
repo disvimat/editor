@@ -105,8 +105,13 @@ No están en la lista original de módulos, pero importan para el uso real:
    **Corregido:** el escritorio ya habla cada acción por el lector de
    pantalla y envía braille a la línea. Sigue faltando un add-on propio
    para la *entrada* por teclado BR8 (E1).
-4. **Las sesiones web viven en memoria** y desaparecen al reiniciar el
-   proceso; no hay autenticación ni persistencia.
+4. **Las sesiones web viven en memoria.** Ya no crecen sin límite: caducan
+   por inactividad (`DISVIMAT_SESSION_TTL`, dos horas por defecto) y su
+   número está acotado (`DISVIMAT_MAX_SESSIONS`, 500), descartando la menos
+   usada. Cuando una sesión caduca la página abre otra y **lo anuncia por
+   voz**, para no dejar al usuario escribiendo en un editor mudo. Sigue sin
+   haber autenticación ni persistencia: al reiniciar el proceso se pierde
+   el documento.
 5. **El braille necesita validación experta.** El motor está terminado; los
    valores no: deben contrastarse con la signografía matemática de la CBE
    antes de cualquier uso en el aula.
