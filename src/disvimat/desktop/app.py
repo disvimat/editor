@@ -8,6 +8,7 @@ caret moves) and in the status line. Interface strings come from the
 """
 
 import os
+from pathlib import Path
 
 import wx
 
@@ -16,29 +17,27 @@ from disvimat.core.dvm import DvmError, from_dvm, to_dvm
 from disvimat.core.editor import Editor, Result, create_editor
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
 from disvimat.core.output import BrailleProvider
-from disvimat.core.tables import Catalog, data_dir
+from disvimat.core.tables import Catalog, PlatformKeyEntry, Table, data_dir, load_table
 from disvimat.core.ui_text import UIText
 from disvimat.desktop.screen_reader import SpeechOutput, create_output
 from disvimat.export.xhtml import XHTMLExporter
 
-#: Special keys -> canonical table name.
-_SPECIAL_KEYS = {
-    wx.WXK_LEFT: "Left",
-    wx.WXK_RIGHT: "Right",
-    wx.WXK_UP: "Up",
-    wx.WXK_DOWN: "Down",
-    wx.WXK_HOME: "Home",
-    wx.WXK_END: "End",
-    wx.WXK_TAB: "Tab",
-    wx.WXK_DELETE: "Delete",
-    wx.WXK_BACK: "Backspace",
-    wx.WXK_RETURN: "Return",
-    wx.WXK_NUMPAD_ENTER: "Return",
-    wx.WXK_NUMPAD_ADD: "NumAdd",
-    wx.WXK_NUMPAD_SUBTRACT: "NumSubtract",
-    wx.WXK_NUMPAD_MULTIPLY: "NumMultiply",
-    wx.WXK_NUMPAD_DIVIDE: "NumDivide",
-}
+
+def _special_keys(directory: Path | None = None) -> dict[int, str]:
+    """wx key code -> canonical stroke name, from ``keys_platform.json``.
+
+    The table is the single place where a canonical name is tied to what a
+    platform actually sends, so the desktop and the web cannot disagree
+    about which physical key does what.
+    """
+    table: Table[PlatformKeyEntry] = load_table(
+        (directory or data_dir()) / "keys_platform.json", PlatformKeyEntry
+    )
+    return {getattr(wx, name): entry.canonical for entry in table.entries for name in entry.wx}
+
+
+#: Special keys -> canonical table name (built once, at import).
+_SPECIAL_KEYS = _special_keys()
 
 
 def _finished_word(result: Result) -> str:

@@ -16,26 +16,35 @@ let session = null;
 // even when the user types faster than the network answers.
 let queue = Promise.resolve();
 
-// Browser special keys -> canonical table name.
-const SPECIAL_KEYS = {
-  ArrowLeft: "Left", ArrowRight: "Right", ArrowUp: "Up", ArrowDown: "Down",
-  Home: "Home", End: "End", Tab: "Tab", Delete: "Delete",
-  Backspace: "Backspace", Enter: "Return",
-};
+// Canonical stroke names, served from data/keys_platform.json — the same
+// table the desktop reads, so both interfaces answer a physical key the
+// same way. BY_CODE is consulted first: it is the more specific of the
+// two, and the keypad needs it (a browser reports the keypad's division
+// key as key "/", exactly like the one on the main row).
+const BY_KEY = {};
+const BY_CODE = {};
+for (const entry of JSON.parse(document.getElementById("platform-keys").textContent)) {
+  if (entry.key) BY_KEY[entry.key] = entry.canonical;
+  if (entry.code) BY_CODE[entry.code] = entry.canonical;
+}
+
+function specialKey(event) {
+  return BY_CODE[event.code] || BY_KEY[event.key] || null;
+}
 
 function canonicalKeys(event) {
   const modifiers = [];
   if (event.ctrlKey) modifiers.push("Ctrl");
   if (event.altKey) modifiers.push("Alt");
   if (event.shiftKey) modifiers.push("Shift");
-  let name;
-  if (event.key in SPECIAL_KEYS) {
-    name = SPECIAL_KEYS[event.key];
-  } else if (modifiers.length && !(modifiers.length === 1 && modifiers[0] === "Shift")) {
-    if (event.key.length !== 1) return null;
-    name = event.key.toUpperCase();
-  } else {
-    return null; // printable key without modifiers: handled as a character
+  let name = specialKey(event);
+  if (name === null) {
+    if (modifiers.length && !(modifiers.length === 1 && modifiers[0] === "Shift")) {
+      if (event.key.length !== 1) return null;
+      name = event.key.toUpperCase();
+    } else {
+      return null; // printable key without modifiers: handled as a character
+    }
   }
   return modifiers.length ? [...modifiers, name].join("+") : name;
 }

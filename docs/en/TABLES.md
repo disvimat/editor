@@ -32,6 +32,7 @@ Every table looks the same:
 | `keys_signs.json` | A2 | sign or structure → key stroke |
 | `keys_commands.json` | A3 | command → key stroke |
 | `keys_numpad.json` | A4 | numeric-keypad alternatives |
+| `keys_platform.json` | A2-A4 | canonical stroke name → what wx and the browser send |
 | `profiles.json` | A7 | profiles → maximum level and calculator lock |
 | `glyphs.json` | B1 | glyph and linear template |
 | `labels.<lang>.json` | B2 | speech label (with `parts` for structures) |

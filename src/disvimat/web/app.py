@@ -7,6 +7,7 @@ native MathML, which modern browsers speak; on top of that every answer
 carries the core speech string, announced in an ``aria-live`` region.
 """
 
+import json
 import os
 import re
 import threading
@@ -26,7 +27,7 @@ from disvimat.backends import create_outputs
 from disvimat.core.dvm import DvmError, from_dvm, to_dvm
 from disvimat.core.editor import Editor, Result, create_editor
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
-from disvimat.core.tables import Catalog, data_dir
+from disvimat.core.tables import Catalog, PlatformKeyEntry, Table, data_dir, load_table
 from disvimat.core.ui_text import UIText
 from disvimat.export.xhtml import XHTMLExporter
 
@@ -170,14 +171,35 @@ class _SessionStore:
             del self._sessions[key]
 
 
+def platform_keys_json(directory: Path | None = None) -> str:
+    """The browser half of ``keys_platform.json``, ready to embed.
+
+    The page needs to turn a ``KeyboardEvent`` into a canonical stroke
+    name, and the desktop needs the same names from wx key codes. Both come
+    from the one table, so the two interfaces cannot end up answering the
+    same physical key differently.
+    """
+    table: Table[PlatformKeyEntry] = load_table(
+        (directory or data_dir()) / "keys_platform.json", PlatformKeyEntry
+    )
+    payload = [
+        {"canonical": entry.canonical, "key": entry.dom_key, "code": entry.dom_code}
+        for entry in table.entries
+    ]
+    # The JSON is embedded in a <script> block, so no "<" may survive in it.
+    return json.dumps(payload, separators=(",", ":")).replace("<", "\u003c")
+
+
 def render_page(language: str) -> str:
     """The page with its ``{{placeholders}}`` replaced by the ui table."""
     text = UIText.load(language=language)
     template = (_STATIC / "index.html").read_text(encoding="utf-8")
+    special = {"language": lambda: language, "platform_keys": platform_keys_json}
 
     def replace(match: re.Match[str]) -> str:
         name = match.group(1)
-        return language if name == "language" else text(name)
+        build = special.get(name)
+        return build() if build is not None else text(name)
 
     return _PLACEHOLDER.sub(replace, template)
 

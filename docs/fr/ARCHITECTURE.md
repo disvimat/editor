@@ -97,7 +97,9 @@ Chaque frappe suit le même chemin dans les deux interfaces :
 
 1. L'interface normalise l'événement vers la **forme canonique** des
    tables : `"Left"`, `"Ctrl+F"`, `"+"`. Ces noms sont en anglais et ne
-   sont jamais traduits.
+   sont jamais traduits. Ce que chaque plateforme envoie pour chaque nom
+   vit dans `data/keys_platform.json`, que lisent les deux adaptateurs :
+   c'est ce qui les empêche de diverger sur une même touche physique.
 2. `Keyboard.resolve` la convertit en élément du catalogue, en respectant
    le niveau du profil d'utilisateur (A7).
 3. `Editor.press` l'applique : une commande s'exécute, ou un signe ou une

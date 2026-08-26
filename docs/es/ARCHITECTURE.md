@@ -94,7 +94,9 @@ Cada pulsación sigue el mismo camino en las dos interfaces:
 
 1. La interfaz normaliza el evento a la **forma canónica** de las tablas:
    `"Left"`, `"Ctrl+F"`, `"+"`. Esos nombres están en inglés y no se
-   traducen nunca.
+   traducen nunca. Qué envía cada plataforma para cada nombre vive en
+   `data/keys_platform.json`, que leen los dos adaptadores: es lo que
+   impide que se separen sobre una misma tecla física.
 2. `Keyboard.resolve` la convierte en un elemento del catálogo, respetando
    el nivel del perfil de usuario (A7).
 3. `Editor.press` la aplica: se ejecuta un comando, o se inserta un signo o

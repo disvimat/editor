@@ -27,7 +27,7 @@ tables, modules A10/B7).
 | A2 signs and structures → key strokes | **done** | `keys_signs.json`; strokes may be **chords** (`"Ctrl+G, P"`, the EDICO convention) resolved by a small state machine |
 | A3 commands → key strokes | **partial** | Table done; the *conditions* grammar is not implemented (the `condition` field exists and conditional entries are ignored) |
 | — keyboard profiles and user reassignment | **done** | Compatibility profiles (`data/keymaps/`, Lambda/EDICO) load over the defaults; a per-user keymap (`$DISVIMAT_USER_KEYMAP` or `~/.disvimat/user_keys.json`) loads last and wins. The `rebind` tool reassigns a key with conflict detection (refuses unknown commands and chord overlaps, warns on stolen strokes) |
-| A4 alternative keys (numeric keypad) | **partial** | Four bindings only; the full keypad scheme is pending |
+| A4 alternative keys (numeric keypad) | **partial** | Four bindings only; the full keypad scheme is pending. They now work on **both** interfaces: the browser reports the keypad's `/` as key `"/"` like the main row, so the web read it as a division sign while the desktop inserted a fraction. Both adapters now derive their key names from `keys_platform.json` |
 | A5 script / add-on designer | **done** | [Add-ons](ADDONS.md): a `register(registry)` function adds commands (key, speech, code) and exporters, found as installed packages or as `.py` files in `DISVIMAT_ADDONS`. Failures are contained |
 | A6 help file (editable, per language) | **pending** | |
 | A7 user profile configurator | **partial** | `profiles.json` limits elements per level and locks the calculator; there is no editing interface for profiles |

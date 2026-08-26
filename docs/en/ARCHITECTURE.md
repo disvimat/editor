@@ -92,7 +92,9 @@ Every key stroke follows the same path in both interfaces:
 
 1. The interface normalises the event to the **canonical form** of the
    tables: `"Left"`, `"Ctrl+F"`, `"+"`. These names are English and are
-   never translated.
+   never translated. What each platform sends for each name lives in
+   `data/keys_platform.json`, which both adapters read: that is what keeps
+   them from drifting apart over the same physical key.
 2. `Keyboard.resolve` maps the stroke to a catalogue element, honouring the
    user profile level (A7).
 3. `Editor.press` applies it: a command runs, a sign or a structure is
