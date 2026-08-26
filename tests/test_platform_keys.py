@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from disvimat.core.editor import create_editor
 from disvimat.core.keyboard import parse_chord
@@ -124,6 +125,28 @@ def test_the_main_row_slash_still_makes_a_division_sign() -> None:
     editor = create_editor(language="es")
     result = editor.press("/") or editor.type_character("/")
     assert result.text == "÷"
+
+
+# --- the guard rails --------------------------------------------------------
+#
+# What makes a half-added binding fail the build rather than go quiet on one
+# interface. Without these, the validators are untested scaffolding.
+
+
+def test_a_binding_the_browser_could_never_send_is_refused() -> None:
+    with pytest.raises(ValidationError, match="browser"):
+        PlatformKeyEntry(id="ghost", canonical="Ghost", wx=("WXK_F13",))
+
+
+def test_a_binding_the_desktop_could_never_send_is_refused() -> None:
+    with pytest.raises(ValidationError, match="desktop"):
+        PlatformKeyEntry(id="ghost", canonical="Ghost", dom_key="F13")
+
+
+def test_a_canonical_name_must_look_like_one() -> None:
+    """The tables spell them in upper camel case; "left" would never match."""
+    with pytest.raises(ValidationError):
+        PlatformKeyEntry(id="left", canonical="left", dom_key="ArrowLeft", wx=("WXK_LEFT",))
 
 
 # --- the desktop half -------------------------------------------------------
