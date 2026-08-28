@@ -118,10 +118,18 @@ un usage réel :
 5. **Le braille demande une validation experte.** Le moteur est terminé,
    les valeurs ne le sont pas : elles doivent être confrontées à la
    notation mathématique braille de la CBE avant tout usage en classe.
-6. **Les tests d'accessibilité automatisés manquent.** L'intégrité des
-   tables est vérifiée en intégration continue, mais il n'y a ni passage
-   d'axe-core sur la page web ni tests NVDA scriptés ; l'accessibilité est
-   vérifiée à la main.
+6. **Tests d'accessibilité automatisés : la moitié existe désormais.** Le
+   contrat du bureau avec le lecteur d'écran **est** vérifié en intégration
+   continue : un travail sous **Windows** avec wxPython construit la vraie
+   fenêtre et contrôle que chaque action est oralisée (et pas seulement
+   affichée dans la barre d'état), que le curseur se pose là où le noyau l'a
+   mis, que la ligne courante parvient à l'afficheur braille et qu'aucun
+   braille n'est envoyé sans moteur. L'intégration continue ne tournait que
+   sous Linux, sans wxPython : ces tests se sautaient entièrement et le
+   build passait au vert sans rien avoir testé ; `DISVIMAT_REQUIRE_DESKTOP=1`
+   transforme désormais ce saut en échec là où wxPython doit être présent.
+   Il manque encore : un passage d'axe-core sur la page web, des tests NVDA
+   scriptés (Guidepup, par exemple) et tout test de `editor.js`.
 
 ## Prochaines étapes suggérées
 

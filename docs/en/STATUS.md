@@ -114,9 +114,18 @@ These are not in the original module list but matter for real use:
 5. **Braille needs expert validation.** The engine is finished, the values
    are not: they must be checked against the CBE mathematical braille
    standard before any classroom use.
-6. **Automated accessibility testing is missing.** Table integrity is
-   enforced in CI, but there is no axe-core pass on the web page and no
-   scripted NVDA testing; accessibility is verified by hand.
+6. **Automated accessibility testing: half of it now exists.** The
+   desktop's contract with the screen reader **is** checked in CI: a
+   **Windows** job with wxPython builds the real window and verifies that
+   every action is spoken (not merely shown on the status line), that the
+   caret lands where the core put it, that the current line reaches the
+   braille display, and that no braille is sent when there is no engine.
+   CI used to run on Linux only, without wxPython, so those tests skipped
+   themselves entirely and the build went green having tested nothing;
+   `DISVIMAT_REQUIRE_DESKTOP=1` now turns that skip into a failure wherever
+   wxPython is meant to be present.
+   Still missing: an axe-core pass on the web page, scripted NVDA testing
+   (Guidepup, for instance) and any test at all for `editor.js`.
 
 ## Suggested next steps
 

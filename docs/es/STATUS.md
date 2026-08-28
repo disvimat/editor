@@ -115,9 +115,17 @@ No están en la lista original de módulos, pero importan para el uso real:
 5. **El braille necesita validación experta.** El motor está terminado; los
    valores no: deben contrastarse con la signografía matemática de la CBE
    antes de cualquier uso en el aula.
-6. **Faltan pruebas automáticas de accesibilidad.** La integridad de las
-   tablas se verifica en CI, pero no hay pasada de axe-core sobre la página
-   web ni pruebas de NVDA guionizadas; la accesibilidad se verifica a mano.
+6. **Pruebas automáticas de accesibilidad: a medias.** El contrato del
+   escritorio con el lector de pantalla **sí** se verifica ahora en CI: un
+   trabajo en **Windows** con wxPython construye la ventana real y comprueba
+   que cada acción se habla (no solo se muestra en la barra de estado), que
+   el caret cae donde dijo el núcleo, que la línea actual llega a la línea
+   braille y que no se envía braille sin motor. Antes la CI corría solo en
+   Linux sin wxPython, así que esas pruebas se saltaban enteras y el build
+   salía verde sin haber probado nada; `DISVIMAT_REQUIRE_DESKTOP=1` convierte
+   ahora ese salto en un fallo donde wxPython debe estar.
+   Sigue faltando: pasada de axe-core sobre la página web, pruebas de NVDA
+   guionizadas (p. ej. Guidepup) y cualquier prueba de `editor.js`.
 
 ## Próximos pasos sugeridos
 

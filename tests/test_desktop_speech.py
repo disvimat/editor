@@ -9,7 +9,9 @@ handed to the speech output.
 
 import pytest
 
-wx = pytest.importorskip("wx", reason="the desktop interface needs wxPython")
+from wx_support import require_wx
+
+wx = require_wx()
 
 from disvimat.desktop.app import _finished_word, canonical_keys  # noqa: E402
 from disvimat.desktop.screen_reader import SilentOutput  # noqa: E402
