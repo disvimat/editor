@@ -128,8 +128,19 @@ un usage réel :
    sous Linux, sans wxPython : ces tests se sautaient entièrement et le
    build passait au vert sans rien avoir testé ; `DISVIMAT_REQUIRE_DESKTOP=1`
    transforme désormais ce saut en échec là où wxPython doit être présent.
-   Il manque encore : un passage d'axe-core sur la page web, des tests NVDA
-   scriptés (Guidepup, par exemple) et tout test de `editor.js`.
+   Le **web** aussi : la structure dont dépend un lecteur d'écran est
+   contrôlée sur la page rendue (une seule région `aria-live`, la barre
+   d'état délibérément en dehors, `role="application"` avec nom et
+   instructions, références `aria-*` qui aboutissent, identifiants uniques,
+   lien d'évitement qui mène quelque part, ordre des titres, zoom autorisé,
+   `lang` par langue). Et `editor.js` est passé d'aucun test à une suite
+   **vitest + jsdom** qui évalue le vrai fichier dans la vraie page et le
+   pilote par événements : le `/` du pavé numérique, l'ordre des frappes
+   (une seule requête en vol), la région vive et la reprise oralisée d'une
+   session expirée.
+   Il manque encore : un passage d'**axe-core dans un vrai navigateur** —
+   jsdom ne peut donner ni contraste ni visibilité calculée, l'y faire
+   serait une fausse assurance — et des tests NVDA scriptés (Guidepup).
 
 ## Prochaines étapes suggérées
 

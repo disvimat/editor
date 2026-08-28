@@ -1,0 +1,13 @@
+{
+  "name": "disvimat-web-client",
+  "private": true,
+  "description": "Tests for the DISVIMAT web client (src/disvimat/web/static).",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0",
+    "vitest": "^4.0.0"
+  }
+}

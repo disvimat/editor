@@ -124,8 +124,19 @@ These are not in the original module list but matter for real use:
    themselves entirely and the build went green having tested nothing;
    `DISVIMAT_REQUIRE_DESKTOP=1` now turns that skip into a failure wherever
    wxPython is meant to be present.
-   Still missing: an axe-core pass on the web page, scripted NVDA testing
-   (Guidepup, for instance) and any test at all for `editor.js`.
+   The **web** too: the structure a screen reader depends on is checked
+   against the rendered page (a single `aria-live` region, the status bar
+   deliberately outside it, `role="application"` with a name and
+   instructions, `aria-*` references that resolve, unique ids, a skip link
+   that lands somewhere, heading order, zoom allowed, `lang` per language).
+   And `editor.js` went from no tests at all to a **vitest + jsdom** suite
+   that evaluates the real file inside the real page and drives it with
+   events: the keypad's `/`, the order of key strokes (one request in
+   flight at a time), the live region, and recovering from an expired
+   session out loud.
+   Still missing: an **axe-core pass in a real browser** — what jsdom
+   cannot give is computed contrast and visibility, so running it there
+   would be false confidence — and scripted NVDA testing (Guidepup).
 
 ## Suggested next steps
 

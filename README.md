@@ -61,6 +61,14 @@ integrity tests will tell you if anything is missing. See
 .venv/bin/pytest            # tests
 ```
 
+The web client is the one part that does not run under Python. Its tests
+evaluate the real `editor.js` against the real page in jsdom:
+
+```bash
+npm install
+npm test
+```
+
 Branch workflow: work happens on a topic branch, is merged into `dev` for
 testing (continuous integration plus manual NVDA checks), and only reaches
 `main` once validated.
