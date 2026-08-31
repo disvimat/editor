@@ -266,3 +266,79 @@ def test_sessions_in_different_languages_may_read_at_the_same_time() -> None:
         thread.join()
 
     assert not wrong, f"{len(wrong)} readings came back in the wrong language: {wrong[:3]}"
+
+
+class ThreadLocalMathCAT(SharedMathCAT):
+    """A fake that keeps its rules per thread, as the real library does.
+
+    ``SetRulesDir`` on one thread does not make the preferences exist on
+    another: there, ``SetPreference`` fails outright. A server answers from
+    a pool of threads, so a backend built on one and used on another must
+    still work. The earlier fake could not tell the two behaviours apart,
+    and the real bug — a 500 on braille export — went unseen because the
+    suite runs with MathCAT switched off.
+    """
+
+    def __init__(self, delay: float = 0.0) -> None:
+        super().__init__(delay)
+        self._local = threading.local()
+
+    def SetRulesDir(self, directory: str) -> None:  # noqa: N802
+        self._local.rules = directory
+
+    def SetPreference(self, name: str, value: str) -> None:  # noqa: N802
+        if getattr(self._local, "rules", None) is None:
+            raise OSError(f"{name} is an unknown MathCAT preference!")
+        super().SetPreference(name, value)
+
+
+def test_a_backend_built_on_one_thread_works_on_another() -> None:
+    library = ThreadLocalMathCAT()
+    backend = MathCATBackend(mathml_of, "es", library=library, rules_dir=RULES)
+    assert backend.read(expression()) == "speech:es"  # this thread is set up
+
+    answers: list[str] = []
+    failures: list[str] = []
+
+    def elsewhere() -> None:
+        try:
+            answers.append(backend.read(expression()))
+            answers.append(backend.unicode(expression()))
+        except Exception as error:  # noqa: BLE001 - the point of the test
+            failures.append(f"{type(error).__name__}: {error}")
+
+    thread = threading.Thread(target=elsewhere)
+    thread.start()
+    thread.join()
+
+    assert not failures, f"the backend broke on another thread: {failures}"
+    assert answers == ["speech:es", "braille:CMU"]
+
+
+def test_every_thread_of_a_pool_gets_its_own_rules() -> None:
+    """Which is what a synchronous FastAPI endpoint runs in."""
+    library = ThreadLocalMathCAT(delay=0.001)
+    spanish = MathCATBackend(mathml_of, "es", library=library, rules_dir=RULES)
+    english = MathCATBackend(mathml_of, "en", library=library, rules_dir=RULES)
+    wrong: list[str] = []
+
+    def hammer(backend: MathCATBackend, language: str) -> None:
+        for _ in range(10):
+            try:
+                spoken = backend.read(expression())
+            except Exception as error:  # noqa: BLE001
+                wrong.append(f"{language}: {type(error).__name__}: {error}")
+                return
+            if spoken != f"speech:{language}":
+                wrong.append(f"{language} was handed {spoken}")
+
+    threads = [
+        threading.Thread(target=hammer, args=(backend, language))
+        for backend, language in ((spanish, "es"), (english, "en"))
+        for _ in range(2)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert not wrong, wrong[:3]

@@ -13,7 +13,6 @@ import re
 import threading
 import time
 import uuid
-import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from collections.abc import Callable
 from pathlib import Path
@@ -23,13 +22,9 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from disvimat.backends import Workspace, create_workspace, open_document
-from disvimat.core.dvm import DvmError, to_dvm
-from disvimat.core.editor import Editor, Result
-from disvimat.core.filters.mathml import FilterError, MathMLFilter
+from disvimat.bridge import Bridge, BridgeError
 from disvimat.core.tables import PlatformKeyEntry, Table, data_dir, load_table
 from disvimat.core.ui_text import UIText
-from disvimat.export.xhtml import XHTMLExporter
 
 _STATIC = Path(__file__).resolve().parent / "static"
 _PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
@@ -68,54 +63,16 @@ class OpenRequest(BaseModel):
 
 
 class _Session:
-    """Editor and export helpers for the document currently open."""
+    """One open document.
+
+    The editing itself lives in :class:`~disvimat.bridge.Bridge`, which the
+    browser drives directly under Pyodide. Keeping both front ends on the
+    same object is what stops them drifting apart, the way the two keyboard
+    mappings once did.
+    """
 
     def __init__(self, language: str, profile: str | None, keymap: str | None = None) -> None:
-        self._keymap = keymap
-        self._adopt(create_workspace(language=language, profile=profile, keymap=keymap))
-
-    def _adopt(self, workspace: Workspace) -> None:
-        """Take on an editor and the settings its document is opened under."""
-        self.editor: Editor = workspace.editor
-        self.language = workspace.language
-        self.profile = workspace.profile
-        self.transcriber = workspace.braille
-        self.exporter = XHTMLExporter(self.editor.catalog)
-        # Rendered MathML per line revision (see Document.revisions).
-        self._mathml_cache: dict[int, str] = {}
-
-    def open(self, dvm: str) -> Result:
-        """Reopen under the language and profile the document itself declares."""
-        self._adopt(open_document(dvm, keymap=self._keymap))
-        return self.editor.state()
-
-    def mathml(self) -> str:
-        """One ``<math>`` per document line, so multi-line documents render whole.
-
-        Every key stroke re-sends the whole document to the page, but only
-        the edited line can have changed, so the rest is served from the
-        cache. Without this the cost of a key stroke grows with the length
-        of the document; with it, it stays flat.
-        """
-        document = self.editor.document
-        revisions = document.revisions()
-        rendered = []
-        for revision, line in zip(revisions, document.lines, strict=True):
-            mathml = self._mathml_cache.get(revision)
-            if mathml is None:
-                mathml = ET.tostring(self.exporter.mathml(line), encoding="unicode")
-                self._mathml_cache[revision] = mathml
-            rendered.append(mathml)
-        # Revisions are never reused, so entries for deleted lines (and for
-        # every line superseded by an edit) would pile up: drop them.
-        if len(self._mathml_cache) > len(revisions):
-            live = set(revisions)
-            self._mathml_cache = {r: m for r, m in self._mathml_cache.items() if r in live}
-        return "<br/>".join(rendered)
-
-    def braille(self) -> str:
-        assert self.transcriber is not None
-        return "\n".join(self.transcriber.unicode(line) for line in self.editor.document.lines)
+        self.bridge = Bridge(language=language, profile=profile, keymap=keymap)
 
 
 class _SessionStore:
@@ -236,14 +193,9 @@ def create_app(store: _SessionStore | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="unknown or expired session")
         return session
 
-    def view(session_id: str, session: _Session, result: Result) -> View:
-        return View(
-            session=session_id,
-            text=result.text,
-            position=result.position,
-            speech=result.speech,
-            mathml=session.mathml(),
-        )
+    def view(session_id: str, payload: str) -> View:
+        """The bridge's JSON, plus the id this session is reached by."""
+        return View(session=session_id, **json.loads(payload))
 
     @app.get("/", response_class=HTMLResponse)
     def index(language: str | None = None) -> str:
@@ -260,35 +212,29 @@ def create_app(store: _SessionStore | None = None) -> FastAPI:
             keymap=keymap or default_keymap,
         )
         sessions.add(session_id, session)
-        return view(session_id, session, session.editor.state())
+        return view(session_id, session.bridge.state())
 
     @app.post("/api/session/{session_id}/key", response_model=View)
     def key(session_id: str, request: KeyRequest) -> View:
         session = get_session(session_id)
-        result: Result | None = None
-        if request.keys:
-            result = session.editor.press(request.keys)
-        # The second stroke of a chord ("Ctrl+G, P") arrives as a bare
-        # character; while a chord waits, resolve it as a key stroke
-        # (bindings name letters in upper case) rather than typing it.
-        if result is None and request.character and session.editor.chord_pending():
-            result = session.editor.press(request.character.upper())
-        if result is None and request.character:
-            result = session.editor.type_character(request.character)
-        if result is None:
-            result = session.editor.state()
-        return view(session_id, session, result)
+        return view(session_id, session.bridge.press(request.keys, request.character))
 
     @app.post("/api/session/{session_id}/import", response_model=View)
     def import_xhtml(session_id: str, request: ImportRequest) -> View:
         session = get_session(session_id)
         try:
-            nodes = MathMLFilter(session.editor.catalog).from_xhtml(request.xhtml)
-        except FilterError as error:
+            return view(session_id, session.bridge.import_xhtml(request.xhtml))
+        except BridgeError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
-        return view(session_id, session, session.editor.load(nodes))
 
-    def _download(content: str, name: str, media_type: str) -> PlainTextResponse:
+    def _export(session_id: str, what: str, name: str, media_type: str) -> PlainTextResponse:
+        session = get_session(session_id)
+        try:
+            content = session.bridge.export(what)
+        except BridgeError as error:
+            # The only way an export refuses: no braille source for this
+            # language, which is a conflict rather than a bad request.
+            raise HTTPException(status_code=409, detail=str(error)) from error
         return PlainTextResponse(
             content,
             media_type=media_type,
@@ -297,43 +243,23 @@ def create_app(store: _SessionStore | None = None) -> FastAPI:
 
     @app.get("/api/session/{session_id}/export.xhtml")
     def export_xhtml(session_id: str) -> PlainTextResponse:
-        session = get_session(session_id)
-        content = session.exporter.xhtml_document_lines(
-            session.editor.document.lines, language=session.language
-        )
-        return _download(content, "document.xhtml", "application/xhtml+xml")
+        return _export(session_id, "xhtml", "document.xhtml", "application/xhtml+xml")
 
     @app.get("/api/session/{session_id}/export.brl")
     def export_braille(session_id: str) -> PlainTextResponse:
-        session = get_session(session_id)
-        if session.transcriber is None:
-            raise HTTPException(
-                status_code=409,
-                detail=f"no braille source for language {session.language!r}",
-            )
-        # Unicode braille (U+2800…), the modern portable form.
-        return _download(session.braille() + "\n", "document.brl", "text/plain; charset=utf-8")
+        return _export(session_id, "brl", "document.brl", "text/plain; charset=utf-8")
 
     @app.get("/api/session/{session_id}/export.dvm")
     def export_dvm(session_id: str) -> PlainTextResponse:
-        session = get_session(session_id)
-        # The profile travels with the document: an exam saved from here
-        # must still be an exam when the student opens it again.
-        content = to_dvm(
-            session.editor.document.lines,
-            language=session.language,
-            profile=session.profile,
-        )
-        return _download(content, "document.dvm", "application/json; charset=utf-8")
+        return _export(session_id, "dvm", "document.dvm", "application/json; charset=utf-8")
 
     @app.post("/api/session/{session_id}/open", response_model=View)
     def open_dvm(session_id: str, request: OpenRequest) -> View:
         session = get_session(session_id)
         try:
-            result = session.open(request.dvm)
-        except DvmError as error:
+            return view(session_id, session.bridge.open(request.dvm))
+        except BridgeError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
-        return view(session_id, session, result)
 
     @app.get("/favicon.ico")
     def favicon() -> FileResponse:

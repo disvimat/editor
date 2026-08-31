@@ -1,11 +1,10 @@
-"""Web adapter: the MathML cache and the lifetime of a session.
+"""Web adapter: the lifetime of a session.
 
-Two things the editor needs from the web adapter but that no other test
-covers: rendering a key stroke must not get slower as the document grows,
-and a session must not live in memory for ever.
+The editing itself lives in the bridge, which the browser drives directly
+under Pyodide, and is tested in test_bridge.py. What is left here belongs
+to the server alone: a session must not live in memory for ever, and must
+not leave a screen reader user typing into nothing when it goes.
 """
-
-from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,94 +27,6 @@ class _Clock:
 
 def session(language: str = "en") -> _Session:
     return _Session(language=language, profile=None)
-
-
-# --- the MathML cache ------------------------------------------------------
-
-
-def type_line(instance: _Session, text: str) -> None:
-    for character in text:
-        instance.editor.type_character(character)
-
-
-def test_the_cache_returns_what_a_fresh_render_would() -> None:
-    """The only thing that must never change: the MathML itself."""
-    instance = session()
-    type_line(instance, "1+2")
-    instance.editor.press("Return")
-    type_line(instance, "3*4")
-    cached = instance.mathml()
-
-    fresh = session()
-    type_line(fresh, "1+2")
-    fresh.editor.press("Return")
-    type_line(fresh, "3*4")
-    fresh._mathml_cache.clear()
-    assert cached == fresh.mathml()
-
-
-def test_untouched_lines_are_not_rendered_again() -> None:
-    instance = session()
-    renders = 0
-    original = instance.exporter.mathml
-
-    def counting(nodes: Any) -> Any:
-        nonlocal renders
-        renders += 1
-        return original(nodes)
-
-    instance.exporter.mathml = counting  # type: ignore[method-assign]
-
-    for _ in range(5):
-        instance.editor.press("Return")
-    instance.mathml()  # first pass: every line rendered once
-    assert renders == 6
-
-    renders = 0
-    instance.editor.type_character("7")  # only the last line changes
-    instance.mathml()
-    assert renders == 1
-
-
-def test_editing_a_line_invalidates_only_that_line() -> None:
-    instance = session()
-    type_line(instance, "1")
-    instance.editor.press("Return")
-    type_line(instance, "2")
-    instance.mathml()
-
-    instance.editor.press("Up")  # to the first line
-    instance.editor.type_character("5")
-    assert "<mn>15</mn>" in instance.mathml()
-
-
-def test_undo_is_not_served_from_the_cache() -> None:
-    instance = session()
-    type_line(instance, "12")
-    assert "<mn>12</mn>" in instance.mathml()
-    instance.editor.press("Ctrl+Z")
-    assert "<mn>1</mn>" in instance.mathml()
-
-
-def test_the_cache_does_not_grow_without_bound() -> None:
-    """Revisions are never reused, so stale entries have to be dropped."""
-    instance = session()
-    for _ in range(200):
-        instance.editor.type_character("1")
-        instance.mathml()
-    assert len(instance._mathml_cache) == len(instance.editor.document.lines)
-
-
-def test_deleted_lines_leave_no_entry_behind() -> None:
-    instance = session()
-    for _ in range(10):
-        instance.editor.press("Return")
-    instance.mathml()
-    assert len(instance._mathml_cache) == 11
-    for _ in range(10):
-        instance.editor.press("Backspace")  # merges each line into the one above
-    instance.mathml()
-    assert len(instance._mathml_cache) == 1
 
 
 # --- the session store -----------------------------------------------------

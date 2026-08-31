@@ -56,9 +56,18 @@ DEFAULT_SPEECH_STYLE = "ClearSpeak"
 RULES_DIR_ENV = "MATHCAT_RULES_DIR"
 
 #: Serialises every use of the MathCAT binding. The binding is a module —
-#: one per process — and its preferences are global, so two backends in
-#: different languages share one set of settings. See :class:`MathCATBackend`.
+#: one per process — and its preferences are shared, so two backends in
+#: different languages would otherwise take the settings from each other.
 _LIBRARY_LOCK = threading.RLock()
+
+#: Which library and rules directory this thread has been pointed at.
+#:
+#: MathCAT keeps its state **per thread**: ``SetRulesDir`` on one thread
+#: does not make the preferences exist on another, where ``SetPreference``
+#: then fails with "Language is an unknown MathCAT preference". A server
+#: answers requests from a pool of threads, so the rules have to be set on
+#: whichever thread is asking, not once at construction.
+_THREAD = threading.local()
 
 
 class MathCATUnavailable(RuntimeError):
@@ -166,8 +175,8 @@ class MathCATBackend:
         if rules is None:
             raise MathCATUnavailable("MathCAT rules directory not found")
         self._speech_style = speech_style
+        self._rules = str(rules)
         with _LIBRARY_LOCK:
-            self._library.SetRulesDir(str(rules))
             self._claim()
 
     @property
@@ -197,12 +206,22 @@ class MathCATBackend:
     # --- internals ------------------------------------------------------------
 
     def _claim(self) -> None:
-        """Point the shared library at this backend's language.
+        """Point the library at this backend's language, on this thread.
 
-        Whoever configured it last does not matter: these three settings
-        decide the answer, so they are written again every time, with the
-        lock held from here until the answer has been read back.
+        Whoever configured it last does not matter: these settings decide
+        the answer, so they are written again every time, with the lock
+        held from here until the answer has been read back.
+
+        ``SetRulesDir`` comes first on a thread that has not seen it,
+        because the rules are what define which preferences exist, and
+        MathCAT holds them per thread.
         """
+        # Which library, not just which directory: the tests drive fakes,
+        # and a stale mark would skip the call one of them still needs.
+        configured = (self._library, self._rules)
+        if getattr(_THREAD, "configured", None) != configured:
+            self._library.SetRulesDir(self._rules)
+            _THREAD.configured = configured
         self._library.SetPreference("Language", self.language)
         self._library.SetPreference("SpeechStyle", self._speech_style)
         if self.braille_code:
