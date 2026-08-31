@@ -23,11 +23,11 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from disvimat.backends import create_outputs
-from disvimat.core.dvm import DvmError, from_dvm, to_dvm
-from disvimat.core.editor import Editor, Result, create_editor
+from disvimat.backends import Workspace, create_workspace, open_document
+from disvimat.core.dvm import DvmError, to_dvm
+from disvimat.core.editor import Editor, Result
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
-from disvimat.core.tables import Catalog, PlatformKeyEntry, Table, data_dir, load_table
+from disvimat.core.tables import PlatformKeyEntry, Table, data_dir, load_table
 from disvimat.core.ui_text import UIText
 from disvimat.export.xhtml import XHTMLExporter
 
@@ -68,21 +68,26 @@ class OpenRequest(BaseModel):
 
 
 class _Session:
-    """Editor and export helpers of one user session."""
+    """Editor and export helpers for the document currently open."""
 
     def __init__(self, language: str, profile: str | None, keymap: str | None = None) -> None:
-        self.language = language
-        catalog = Catalog.load(data_dir() / "elements.json")
-        # MathCAT when available, our tables otherwise; braille stays
-        # unavailable rather than serving another language's braille.
-        outputs = create_outputs(catalog, language)
-        self.editor: Editor = create_editor(
-            language=language, profile=profile, reader=outputs.reader, keymap=keymap
-        )
+        self._keymap = keymap
+        self._adopt(create_workspace(language=language, profile=profile, keymap=keymap))
+
+    def _adopt(self, workspace: Workspace) -> None:
+        """Take on an editor and the settings its document is opened under."""
+        self.editor: Editor = workspace.editor
+        self.language = workspace.language
+        self.profile = workspace.profile
+        self.transcriber = workspace.braille
         self.exporter = XHTMLExporter(self.editor.catalog)
-        self.transcriber = outputs.braille
         # Rendered MathML per line revision (see Document.revisions).
         self._mathml_cache: dict[int, str] = {}
+
+    def open(self, dvm: str) -> Result:
+        """Reopen under the language and profile the document itself declares."""
+        self._adopt(open_document(dvm, keymap=self._keymap))
+        return self.editor.state()
 
     def mathml(self) -> str:
         """One ``<math>`` per document line, so multi-line documents render whole.
@@ -312,17 +317,23 @@ def create_app(store: _SessionStore | None = None) -> FastAPI:
     @app.get("/api/session/{session_id}/export.dvm")
     def export_dvm(session_id: str) -> PlainTextResponse:
         session = get_session(session_id)
-        content = to_dvm(session.editor.document.lines, language=session.language)
+        # The profile travels with the document: an exam saved from here
+        # must still be an exam when the student opens it again.
+        content = to_dvm(
+            session.editor.document.lines,
+            language=session.language,
+            profile=session.profile,
+        )
         return _download(content, "document.dvm", "application/json; charset=utf-8")
 
     @app.post("/api/session/{session_id}/open", response_model=View)
     def open_dvm(session_id: str, request: OpenRequest) -> View:
         session = get_session(session_id)
         try:
-            document = from_dvm(request.dvm)
+            result = session.open(request.dvm)
         except DvmError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
-        return view(session_id, session, session.editor.load_lines(document.lines))
+        return view(session_id, session, result)
 
     @app.get("/favicon.ico")
     def favicon() -> FileResponse:

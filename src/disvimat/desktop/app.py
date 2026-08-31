@@ -12,12 +12,12 @@ from pathlib import Path
 
 import wx
 
-from disvimat.backends import create_outputs
-from disvimat.core.dvm import DvmError, from_dvm, to_dvm
-from disvimat.core.editor import Editor, Result, create_editor
+from disvimat.backends import Workspace, create_workspace, open_document
+from disvimat.core.dvm import DvmError, to_dvm
+from disvimat.core.editor import Editor, Result
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
 from disvimat.core.output import BrailleProvider
-from disvimat.core.tables import Catalog, PlatformKeyEntry, Table, data_dir, load_table
+from disvimat.core.tables import PlatformKeyEntry, Table, data_dir, load_table
 from disvimat.core.ui_text import UIText
 from disvimat.desktop.screen_reader import SpeechOutput, create_output
 from disvimat.export.xhtml import XHTMLExporter
@@ -118,6 +118,7 @@ class EditorWindow(wx.Frame):
         self._speech_backend = speech_backend
         self._braille_backend = braille_backend
         self._braille: BrailleWindow | None = None
+        self._keymap = os.environ.get("DISVIMAT_KEYMAP")
         panel = wx.Panel(self)
         self._document = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY)
         self._document.SetName(text("document"))
@@ -130,6 +131,22 @@ class EditorWindow(wx.Frame):
         self._document.Bind(wx.EVT_CHAR, self._on_character)
         self._document.SetFocus()
         self.SetSize((900, 400))
+
+    def _adopt(self, workspace: Workspace) -> None:
+        """Take on the editor a newly opened document asks for.
+
+        Language and profile come from the document, so opening one
+        replaces the editor rather than pouring new lines into the old one:
+        that is what applies an exam file's restrictions (A7/A9). The
+        interface language is deliberately left alone — the menus should
+        not change under a screen reader user mid-session.
+        """
+        self._editor = workspace.editor
+        self._transcriber = workspace.braille
+        self._language = workspace.language
+        self._profile = workspace.profile
+        self._speech_backend = workspace.speech_backend
+        self._braille_backend = workspace.braille_backend
 
     # --- input ---------------------------------------------------------------
 
@@ -275,11 +292,12 @@ class EditorWindow(wx.Frame):
         path = dialog.GetPath()
         try:
             with open(path, encoding="utf-8") as handle:
-                document = from_dvm(handle.read())
+                workspace = open_document(handle.read(), keymap=self._keymap)
         except (OSError, DvmError) as error:
             wx.MessageBox(str(error), text("error_open"), wx.ICON_ERROR)
             return
-        self._apply(self._editor.load_lines(document.lines))
+        self._adopt(workspace)
+        self._apply(self._editor.state())
         self._document.SetFocus()
 
     def _save_dvm(self, _event: wx.CommandEvent) -> None:
@@ -385,17 +403,16 @@ def main() -> None:
     language = os.environ.get("DISVIMAT_LANG", "en")
     profile = os.environ.get("DISVIMAT_PROFILE")
     keymap = os.environ.get("DISVIMAT_KEYMAP")
-    catalog = Catalog.load(data_dir() / "elements.json")
-    outputs = create_outputs(catalog, language)
+    workspace = create_workspace(language=language, profile=profile, keymap=keymap)
     app = wx.App()
     window = EditorWindow(
-        create_editor(language=language, profile=profile, reader=outputs.reader, keymap=keymap),
-        outputs.braille,
+        workspace.editor,
+        workspace.braille,
         UIText.load(language=language),
-        language=language,
-        profile=profile,
-        speech_backend=outputs.speech_backend,
-        braille_backend=outputs.braille_backend,
+        language=workspace.language,
+        profile=workspace.profile,
+        speech_backend=workspace.speech_backend,
+        braille_backend=workspace.braille_backend,
     )
     window.Show()
     app.MainLoop()

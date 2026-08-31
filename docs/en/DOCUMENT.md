@@ -36,8 +36,23 @@ inspectable and diffs cleanly in git.
 }
 ```
 
-- `language` and `profile` record what the document was written with, so a
-  reader can restore the right speech, braille and level.
+- `language` and `profile` are not a footnote: **opening a document builds
+  the editor that document describes**. That is the exam model — the
+  teacher saves a `.dvm` with `"profile": "exam"`, the student opens it on
+  any system, and finds the level limited and the calculator locked
+  (A7/A9) without that machine knowing anything about the exam. Saving
+  writes the profile back, so the restriction survives the round trip
+  instead of lasting one sitting.
+- `language` governs just as much, for a concrete reason: mathematical
+  braille is normative and differs by country, so reading a Spanish
+  document under an English editor would transcribe it into UEB rather
+  than CMU. The **interface** language does not change: menus should not
+  shift under a screen reader user mid-session.
+- A profile the installation does not know is refused as a malformed
+  document rather than crashing.
+- The lock is a classroom convention, not a cryptographic barrier: a `.dvm`
+  is readable JSON and anyone can edit it. What is handed in is the file,
+  and tampering leaves a trace.
 - Each node is one of `{"char": …}`, `{"sign": <id>}` or
   `{"structure": <id>, "slots": [...]}`; ids are the catalogue ids, the
   same stable identifiers everything else uses.

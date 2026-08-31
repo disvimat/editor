@@ -30,7 +30,7 @@ tables, modules A10/B7).
 | A4 alternative keys (numeric keypad) | **partial** | Four bindings only; the full keypad scheme is pending. They now work on **both** interfaces: the browser reports the keypad's `/` as key `"/"` like the main row, so the web read it as a division sign while the desktop inserted a fraction. Both adapters now derive their key names from `keys_platform.json` |
 | A5 script / add-on designer | **done** | [Add-ons](ADDONS.md): a `register(registry)` function adds commands (key, speech, code) and exporters, found as installed packages or as `.py` files in `DISVIMAT_ADDONS`. Failures are contained |
 | A6 help file (editable, per language) | **pending** | |
-| A7 user profile configurator | **partial** | `profiles.json` limits elements per level and locks the calculator; there is no editing interface for profiles |
+| A7 user profile configurator | **partial** | `profiles.json` limits elements per level and locks the calculator, and **the profile travels inside the `.dvm`**: opening a document builds the editor that document describes, so an exam prepared by the teacher imposes its restrictions on any machine. An editing interface for profiles is still missing |
 | A8 calculator | **partial** | Exact fraction arithmetic, precedence, powers and exact roots; no variables, functions or trigonometry |
 | A9 calculator locker | **done** | `calculator: false` in the profile (the `exam` profile) |
 | A10 two-dimensional structures (tables, matrices, determinants) | **partial** | Matrices: insert (`Ctrl+Shift+M`), grid navigation, add row/column (`Alt+Down`/`Alt+Right`), read row by row, MathML `<mtable>` in and out, `.dvm`. Determinants/tables reuse the same node |

@@ -250,3 +250,32 @@ def test_the_menu_only_binds_commands_the_catalogue_knows(window: EditorWindow) 
     for index in range(bar.GetMenuCount()):
         menu = bar.GetMenu(index)
         assert menu.GetMenuItemCount() > 0, f"menu {index} is empty"
+
+
+def test_opening_an_exam_replaces_the_editor_with_a_restricted_one(
+    window: EditorWindow, speech: RecordingOutput
+) -> None:
+    """The file dialog is wx's; what is checked here is what follows it.
+
+    Opening a document swaps the editor for the one the document asks for,
+    which is what applies an exam's restrictions on a machine that knows
+    nothing about that exam.
+    """
+    from disvimat.backends import create_workspace, open_document
+    from disvimat.core.dvm import to_dvm
+
+    teacher = create_workspace(language="en", profile="exam")
+    for key in ("1", "+", "2"):
+        if teacher.editor.press(key) is None:
+            teacher.editor.type_character(key)
+    exam = to_dvm(teacher.editor.document.lines, language="en", profile="exam")
+
+    assert window._profile is None
+    window._adopt(open_document(exam))
+    window._apply(window._editor.state())
+
+    assert window._profile == "exam"
+    assert document_text(window) == "1+2"
+    result = window._editor.press("Ctrl+Return")
+    assert result is not None
+    assert "3" not in result.speech, "the exam opened with its calculator working"
