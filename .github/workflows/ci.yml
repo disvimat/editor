@@ -40,15 +40,28 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
       # The client is TypeScript under src/web-client; what ships is the
       # bundle built from it, which is committed so that installing the
       # Python package is enough to run the editor. The tests evaluate that
       # bundle against the real page in jsdom; see tests/js/harness.js.
       - name: Install dependencies
         run: npm ci
+      # The Pyodide tests run the real wheel built from this tree: the same
+      # Python package the desktop runs, compiled to WebAssembly. Without
+      # the wheel they would skip themselves, so the variable below turns
+      # a missing one into a failure.
+      - name: Build the wheel the browser will load
+        run: |
+          pip install build
+          python -m build --wheel -o dist
       - name: Types (tsc)
         run: npm run typecheck
       - name: Tests (vitest, over a fresh build)
+        env:
+          DISVIMAT_REQUIRE_WHEEL: "1"
         run: npm test
       - name: The committed bundle matches its sources
         run: git diff --exit-code -- src/disvimat/web/static/editor.js

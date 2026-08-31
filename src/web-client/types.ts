@@ -39,8 +39,8 @@ export interface Backend {
   open(dvm: string): Promise<View>;
   /** Replace the content with an imported XHTML document. */
   importXhtml(xhtml: string): Promise<View>;
-  /** Hand the current document to the user in the given format. */
-  save(what: Export): Promise<void>;
+  /** The whole document in the given format, ready to be handed over. */
+  exportAs(what: Export): Promise<string>;
 }
 
 /** The core is no longer there: the session timed out, or the server went. */

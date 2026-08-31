@@ -48,8 +48,13 @@
 		async importXhtml(xhtml) {
 			return this.#adopt(await request(this.#url("import"), json({ xhtml })));
 		}
-		async save(what) {
-			window.open(this.#url(`export.${what}`), "_blank", "noopener");
+		async exportAs(what) {
+			const response = await fetch(this.#url(`export.${what}`));
+			if (!response.ok) {
+				const body = await response.json().catch(() => ({}));
+				throw new Error(body.detail ?? response.statusText);
+			}
+			return await response.text();
 		}
 		#adopt(view) {
 			this.#session = view.session;
@@ -173,9 +178,17 @@
 		sendKeys("Ctrl+Return", null);
 		editor.focus();
 	});
+	/** Hand a file to the user, wherever the core it came from was running. */
+	function download(name, content) {
+		const link = document.createElement("a");
+		link.href = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+		link.download = name;
+		link.click();
+		URL.revokeObjectURL(link.href);
+	}
 	function onExport(id, what) {
 		need(id).addEventListener("click", () => {
-			backend.save(what).catch(handleError);
+			backend.exportAs(what).then((content) => download(`document.${what}`, content)).catch(handleError);
 		});
 	}
 	onExport("btn-save-dvm", "dvm");

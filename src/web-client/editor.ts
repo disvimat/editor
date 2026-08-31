@@ -154,9 +154,21 @@ need("btn-calculate").addEventListener("click", () => {
   editor.focus();
 });
 
+/** Hand a file to the user, wherever the core it came from was running. */
+function download(name: string, content: string): void {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
 function onExport(id: string, what: Export): void {
   need(id).addEventListener("click", () => {
-    void backend.save(what).catch(handleError);
+    void backend
+      .exportAs(what)
+      .then((content) => download(`document.${what}`, content))
+      .catch(handleError);
   });
 }
 

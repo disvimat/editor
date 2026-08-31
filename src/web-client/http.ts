@@ -60,9 +60,13 @@ export class HttpBackend implements Backend {
     return this.#adopt(await request(this.#url("import"), json({ xhtml })));
   }
 
-  async save(what: Export): Promise<void> {
-    // The server sets Content-Disposition, so the browser offers the file.
-    window.open(this.#url(`export.${what}`), "_blank", "noopener");
+  async exportAs(what: Export): Promise<string> {
+    const response = await fetch(this.#url(`export.${what}`));
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as ErrorDetail;
+      throw new Error(body.detail ?? response.statusText);
+    }
+    return await response.text();
   }
 
   #adopt(view: SessionView): View {
