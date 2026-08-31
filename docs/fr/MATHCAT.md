@@ -99,12 +99,18 @@ compilez-le (projet PyO3), puis placez `libmathcat_py` et un répertoire
   gardons donc le français sur nos tables pour l'instant. Quand ces règles
   auront mûri, ajouter `"fr"` à `SPEECH_LANGUAGES` sera le seul changement
   nécessaire.
-- **Singleton global.** L'interface MathCAT ne détient qu'une configuration
-  globale par processus. C'est adapté au bureau (une langue par exécution).
-  Sur le web, des sessions concurrentes dans des langues *différentes*
-  pourraient interférer ; un déploiement monolingue l'évite. Un verrou par
-  processus ou une affinité de worker est la solution si l'usage web
-  multilingue devient important.
+- **Singleton global — corrigé.** L'interface MathCAT ne détient qu'une
+  configuration globale par processus. Sans conséquence au bureau (une
+  langue par exécution), mais sur le web chaque session construit son
+  propre backend sur cette unique bibliothèque, et l'interférence n'était
+  pas hypothétique : la dernière session créée retirait sa langue à toutes
+  les autres. Vérifié avec le vrai MathCAT, un lecteur espagnol recevait
+  « 1 and 1 half » et du braille **UEB** au lieu du CMU dès qu'une session
+  anglaise s'ouvrait — du braille faux présenté comme juste, ce que la
+  politique ci-dessous interdit précisément. Aucun backend ne conserve
+  désormais d'état dans la bibliothèque : chaque appel réapplique ses
+  préférences et lit la réponse sans lâcher un verrou de module. Les
+  réappliquer coûte 0,0012 ms contre 0,22 ms pour la lecture.
 
 ## Politique braille
 

@@ -95,11 +95,17 @@ compílelo (proyecto PyO3); luego deje `libmathcat_py` y un directorio
   al inglés en muchas expresiones), así que de momento mantenemos el
   francés en nuestras tablas. Cuando esas reglas maduren, añadir `"fr"` a
   `SPEECH_LANGUAGES` es el único cambio necesario.
-- **Singleton global.** El enlace de MathCAT guarda una única configuración
-  por proceso. Es correcto en escritorio (un idioma por ejecución). En web,
-  sesiones concurrentes en *idiomas distintos* podrían interferir; un
-  despliegue de un solo idioma lo evita. Un bloqueo por proceso o afinidad
-  de trabajador es la solución si el uso web multilingüe llega a importar.
+- **Singleton global — resuelto.** El enlace de MathCAT guarda una única
+  configuración por proceso. En escritorio da igual (un idioma por
+  ejecución), pero en web cada sesión construye su propio backend sobre esa
+  única biblioteca, y no era una interferencia hipotética: la última sesión
+  creada le quitaba el idioma a todas las demás. Verificado con MathCAT
+  real, un lector español recibía «1 and 1 half» y braille **UEB** en lugar
+  de CMU en cuanto alguien abría una sesión en inglés — braille incorrecto
+  presentado como correcto, justo lo que la política de abajo prohíbe.
+  Ahora ningún backend guarda estado dentro de la biblioteca: cada llamada
+  vuelve a fijar sus preferencias y lee la respuesta sin soltar un cerrojo
+  de módulo. Reaplicarlas cuesta 0,0012 ms frente a 0,22 ms de la lectura.
 
 ## Política braille
 

@@ -26,12 +26,12 @@ bidimensionnelles** (matrices et tableaux, modules A10/B7).
 |---|---|---|
 | A1 filtre Unicode/MathML → DisvimatEditor | **fait** | Aller-retour vérifié par les tests |
 | A2 signes et structures → frappes | **fait** | `keys_signs.json` ; les frappes peuvent être des **accords** (`"Ctrl+G, P"`, la convention d'EDICO) résolus par une petite machine à états |
-| A3 commandes → frappes | **partiel** | Table faite ; la grammaire des *conditions* n'est pas implémentée (le champ `condition` existe et les entrées conditionnelles sont ignorées) |
+| A3 commandes → frappes | **partiel** | Table faite ; la grammaire des *conditions* n'est pas implémentée. Le champ `condition` existe mais `Keyboard` ne charge que les entrées inconditionnelles : une attribution conditionnelle ne ferait rien — ni fonctionner, ni protester. Tant que la grammaire n'existe pas, `integrity.unsupported_conditions` **casse la construction** si une table l'emploie, plutôt que de laisser l'attribution disparaître en silence |
 | — profils de clavier et réattribution utilisateur | **fait** | Les profils de compatibilité (`data/keymaps/`, Lambda/EDICO) se chargent par-dessus les tables par défaut ; un profil de clavier par utilisateur (`$DISVIMAT_USER_KEYMAP` ou `~/.disvimat/user_keys.json`) se charge en dernier et l'emporte. L'outil `rebind` réattribue une touche avec détection de conflits (refuse les commandes inconnues et les chevauchements d'accords, avertit lorsqu'une frappe est volée) |
-| A4 touches alternatives (pavé numérique) | **partiel** | Quatre attributions seulement ; le schéma complet reste à faire |
+| A4 touches alternatives (pavé numérique) | **partiel** | Quatre attributions seulement ; le schéma complet reste à faire. Elles fonctionnent désormais sur **les deux** interfaces : le navigateur signale le `/` du pavé comme touche `"/"`, comme celui de la rangée principale, si bien que le web y voyait un signe de division là où le bureau insérait une fraction. Les deux adaptateurs tirent maintenant leurs noms de `keys_platform.json` |
 | A5 concepteur de scripts / modules | **fait** | [Extensions](ADDONS.md) : une fonction `register(registry)` ajoute commandes (touche, parole, code) et exports, découvertes comme paquets installés ou fichiers `.py` dans `DISVIMAT_ADDONS`. Les pannes sont contenues |
 | A6 fichier d'aide (modifiable, par langue) | **à faire** | |
-| A7 configurateur de profils | **partiel** | `profiles.json` limite les éléments par niveau et verrouille la calculatrice ; aucune interface d'édition des profils |
+| A7 configurateur de profils | **partiel** | `profiles.json` limite les éléments par niveau et verrouille la calculatrice, et **le profil voyage dans le `.dvm`** : ouvrir un document construit l'éditeur que ce document décrit, si bien qu'un examen préparé par l'enseignant impose ses restrictions sur n'importe quelle machine. Une interface d'édition des profils manque encore |
 | A8 calculatrice | **partiel** | Arithmétique exacte des fractions, priorités, puissances et racines exactes ; ni variables, ni fonctions, ni trigonométrie |
 | A9 verrou de calculatrice | **fait** | `calculator: false` dans le profil (profil `exam`) |
 | A10 structures bidimensionnelles (tableaux, matrices, déterminants) | **partiel** | Matrices : insérer (`Ctrl+Maj+M`), navigation en grille, ajouter ligne/colonne (`Alt+Bas`/`Alt+Droite`), lecture ligne par ligne, MathML `<mtable>` aller-retour, `.dvm`. Déterminants/tableaux réutilisent le même nœud |
@@ -107,15 +107,40 @@ un usage réel :
    le bureau oralise désormais chaque action via le lecteur d'écran et
    envoie le braille à l'afficheur. Un module dédié reste nécessaire pour
    la *saisie* au clavier BR8 (E1).
-4. **Les sessions web vivent en mémoire** et disparaissent au redémarrage
-   du processus ; il n'y a ni authentification ni persistance.
+4. **Les sessions web vivent en mémoire.** Elles ne croissent plus sans
+   limite : elles expirent après inactivité (`DISVIMAT_SESSION_TTL`, deux
+   heures par défaut) et leur nombre est borné (`DISVIMAT_MAX_SESSIONS`,
+   500), la moins récemment utilisée étant écartée. Quand une session
+   expire, la page en ouvre une autre et **l'annonce à voix haute**, pour
+   ne laisser personne saisir dans un éditeur devenu muet. Il n'y a
+   toujours ni authentification ni persistance : le document est perdu au
+   redémarrage du processus.
 5. **Le braille demande une validation experte.** Le moteur est terminé,
    les valeurs ne le sont pas : elles doivent être confrontées à la
    notation mathématique braille de la CBE avant tout usage en classe.
-6. **Les tests d'accessibilité automatisés manquent.** L'intégrité des
-   tables est vérifiée en intégration continue, mais il n'y a ni passage
-   d'axe-core sur la page web ni tests NVDA scriptés ; l'accessibilité est
-   vérifiée à la main.
+6. **Tests d'accessibilité automatisés : la moitié existe désormais.** Le
+   contrat du bureau avec le lecteur d'écran **est** vérifié en intégration
+   continue : un travail sous **Windows** avec wxPython construit la vraie
+   fenêtre et contrôle que chaque action est oralisée (et pas seulement
+   affichée dans la barre d'état), que le curseur se pose là où le noyau l'a
+   mis, que la ligne courante parvient à l'afficheur braille et qu'aucun
+   braille n'est envoyé sans moteur. L'intégration continue ne tournait que
+   sous Linux, sans wxPython : ces tests se sautaient entièrement et le
+   build passait au vert sans rien avoir testé ; `DISVIMAT_REQUIRE_DESKTOP=1`
+   transforme désormais ce saut en échec là où wxPython doit être présent.
+   Le **web** aussi : la structure dont dépend un lecteur d'écran est
+   contrôlée sur la page rendue (une seule région `aria-live`, la barre
+   d'état délibérément en dehors, `role="application"` avec nom et
+   instructions, références `aria-*` qui aboutissent, identifiants uniques,
+   lien d'évitement qui mène quelque part, ordre des titres, zoom autorisé,
+   `lang` par langue). Et `editor.js` est passé d'aucun test à une suite
+   **vitest + jsdom** qui évalue le vrai fichier dans la vraie page et le
+   pilote par événements : le `/` du pavé numérique, l'ordre des frappes
+   (une seule requête en vol), la région vive et la reprise oralisée d'une
+   session expirée.
+   Il manque encore : un passage d'**axe-core dans un vrai navigateur** —
+   jsdom ne peut donner ni contraste ni visibilité calculée, l'y faire
+   serait une fausse assurance — et des tests NVDA scriptés (Guidepup).
 
 ## Prochaines étapes suggérées
 

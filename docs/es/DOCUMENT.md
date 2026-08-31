@@ -37,8 +37,23 @@ pérdida. Es JSON: inspeccionable y con diffs limpios en git.
 }
 ```
 
-- `language` y `profile` registran con qué se escribió el documento, para
-  restaurar la voz, el braille y el nivel adecuados.
+- `language` y `profile` no son una nota al pie: **abrir un documento
+  construye el editor que el documento describe**. Ahí está el modelo de
+  examen — el profesor guarda un `.dvm` con `"profile": "exam"`, el alumno
+  lo abre en cualquier sistema, y encuentra el nivel limitado y la
+  calculadora bloqueada (A7/A9) sin que la máquina sepa nada de ese examen.
+  Al guardar, el perfil viaja de vuelta, así que la restricción sobrevive
+  al viaje en lugar de durar una sesión.
+- `language` manda igual, y por una razón concreta: el braille matemático
+  es normativo y difiere por país, así que leer un documento español bajo
+  un editor inglés lo transcribiría a UEB en lugar de a CMU. El idioma de
+  la **interfaz** no cambia: los menús no deben moverse bajo los pies de
+  quien usa un lector de pantalla.
+- Un perfil que la instalación no conoce se rechaza como documento
+  malformado, no revienta.
+- El bloqueo es una convención de aula, no una barrera criptográfica: el
+  `.dvm` es JSON legible y quien quiera puede editarlo. Lo que se entrega
+  es el fichero, y manipularlo deja rastro.
 - Cada nodo es uno de `{"char": …}`, `{"sign": <id>}` o
   `{"structure": <id>, "slots": [...]}`; los ids son los del catálogo, los
   mismos identificadores estables que usa todo lo demás.

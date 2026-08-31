@@ -7,10 +7,14 @@ native MathML, which modern browsers speak; on top of that every answer
 carries the core speech string, announced in an ``aria-live`` region.
 """
 
+import json
 import os
 import re
+import threading
+import time
 import uuid
-import xml.etree.ElementTree as ET
+from collections import OrderedDict
+from collections.abc import Callable
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -18,16 +22,19 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from disvimat.backends import create_outputs
-from disvimat.core.dvm import DvmError, from_dvm, to_dvm
-from disvimat.core.editor import Editor, Result, create_editor
-from disvimat.core.filters.mathml import FilterError, MathMLFilter
-from disvimat.core.tables import Catalog, data_dir
+from disvimat.bridge import Bridge, BridgeError
+from disvimat.core.tables import PlatformKeyEntry, Table, data_dir, load_table
 from disvimat.core.ui_text import UIText
-from disvimat.export.xhtml import XHTMLExporter
 
 _STATIC = Path(__file__).resolve().parent / "static"
 _PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
+
+#: Seconds a session survives without requests. A session holds a whole
+#: document in memory, so it cannot be kept for ever: with no bound, every
+#: page ever opened leaks until the process restarts.
+DEFAULT_SESSION_TTL = 2 * 60 * 60.0
+#: Most sessions kept at once; past it the least recently used is dropped.
+DEFAULT_MAX_SESSIONS = 500
 
 
 class View(BaseModel):
@@ -56,65 +63,139 @@ class OpenRequest(BaseModel):
 
 
 class _Session:
-    """Editor and export helpers of one user session."""
+    """One open document.
+
+    The editing itself lives in :class:`~disvimat.bridge.Bridge`, which the
+    browser drives directly under Pyodide. Keeping both front ends on the
+    same object is what stops them drifting apart, the way the two keyboard
+    mappings once did.
+    """
 
     def __init__(self, language: str, profile: str | None, keymap: str | None = None) -> None:
-        self.language = language
-        catalog = Catalog.load(data_dir() / "elements.json")
-        # MathCAT when available, our tables otherwise; braille stays
-        # unavailable rather than serving another language's braille.
-        outputs = create_outputs(catalog, language)
-        self.editor: Editor = create_editor(
-            language=language, profile=profile, reader=outputs.reader, keymap=keymap
-        )
-        self.exporter = XHTMLExporter(self.editor.catalog)
-        self.transcriber = outputs.braille
+        self.bridge = Bridge(language=language, profile=profile, keymap=keymap)
 
-    def mathml(self) -> str:
-        # One <math> per document line, so multi-line documents render whole.
-        return "<br/>".join(
-            ET.tostring(self.exporter.mathml(line), encoding="unicode")
-            for line in self.editor.document.lines
-        )
 
-    def braille(self) -> str:
-        assert self.transcriber is not None
-        return "\n".join(self.transcriber.unicode(line) for line in self.editor.document.lines)
+class _SessionStore:
+    """The live sessions, bounded in both age and number.
+
+    Sessions live in memory, so two things have to hold: an abandoned
+    session must disappear on its own (``ttl``), and a burst of new ones
+    must not grow without limit (``max_sessions``, least recently used
+    discarded first). Both are enforced here, so the endpoints only ever
+    ask for a session by id.
+
+    The endpoints are synchronous, which means FastAPI runs them in a
+    thread pool and several can reach the store at once; each method takes
+    a lock. The lock guards the *store* — which sessions exist — not the
+    editing of any one session.
+    """
+
+    def __init__(
+        self,
+        ttl: float = DEFAULT_SESSION_TTL,
+        max_sessions: int = DEFAULT_MAX_SESSIONS,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._ttl = ttl
+        self._max = max(1, max_sessions)
+        self._clock = clock
+        # Ordered by last use: the first entry is the least recently used.
+        self._sessions: OrderedDict[str, tuple[float, _Session]] = OrderedDict()
+        self._lock = threading.Lock()
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._sessions)
+
+    def add(self, session_id: str, session: _Session) -> None:
+        with self._lock:
+            self._drop_expired()
+            while len(self._sessions) >= self._max:
+                self._sessions.popitem(last=False)
+            self._sessions[session_id] = (self._clock(), session)
+
+    def get(self, session_id: str) -> _Session | None:
+        """The session, with its deadline refreshed; ``None`` when gone."""
+        with self._lock:
+            self._drop_expired()
+            entry = self._sessions.get(session_id)
+            if entry is None:
+                return None
+            self._sessions[session_id] = (self._clock(), entry[1])
+            self._sessions.move_to_end(session_id)
+            return entry[1]
+
+    def _drop_expired(self) -> None:
+        """Discard idle sessions. The caller holds the lock."""
+        deadline = self._clock() - self._ttl
+        expired = [key for key, (used, _) in self._sessions.items() if used <= deadline]
+        for key in expired:
+            del self._sessions[key]
+
+
+def platform_keys_json(directory: Path | None = None) -> str:
+    """The browser half of ``keys_platform.json``, ready to embed.
+
+    The page needs to turn a ``KeyboardEvent`` into a canonical stroke
+    name, and the desktop needs the same names from wx key codes. Both come
+    from the one table, so the two interfaces cannot end up answering the
+    same physical key differently.
+    """
+    table: Table[PlatformKeyEntry] = load_table(
+        (directory or data_dir()) / "keys_platform.json", PlatformKeyEntry
+    )
+    payload = [
+        {"canonical": entry.canonical, "key": entry.dom_key, "code": entry.dom_code}
+        for entry in table.entries
+    ]
+    # The JSON is embedded in a <script> block, so no "<" may survive in it.
+    return json.dumps(payload, separators=(",", ":")).replace("<", "\u003c")
 
 
 def render_page(language: str) -> str:
     """The page with its ``{{placeholders}}`` replaced by the ui table."""
     text = UIText.load(language=language)
     template = (_STATIC / "index.html").read_text(encoding="utf-8")
+    special = {"language": lambda: language, "platform_keys": platform_keys_json}
 
     def replace(match: re.Match[str]) -> str:
         name = match.group(1)
-        return language if name == "language" else text(name)
+        build = special.get(name)
+        return build() if build is not None else text(name)
 
     return _PLACEHOLDER.sub(replace, template)
 
 
-def create_app() -> FastAPI:
-    """Build the application; sessions live as long as the process."""
+def create_app(store: _SessionStore | None = None) -> FastAPI:
+    """Build the application.
+
+    Sessions are held in memory and expire when idle; ``store`` lets the
+    tests supply their own clock and limits.
+    """
     app = FastAPI(title="DISVIMAT web")
-    sessions: dict[str, _Session] = {}
+    if store is None:
+        store = _SessionStore(
+            ttl=float(os.environ.get("DISVIMAT_SESSION_TTL", DEFAULT_SESSION_TTL)),
+            max_sessions=int(os.environ.get("DISVIMAT_MAX_SESSIONS", DEFAULT_MAX_SESSIONS)),
+        )
+    sessions = store
     default_language = os.environ.get("DISVIMAT_LANG", "en")
     default_keymap = os.environ.get("DISVIMAT_KEYMAP")
 
     def get_session(session_id: str) -> _Session:
         session = sessions.get(session_id)
         if session is None:
-            raise HTTPException(status_code=404, detail="unknown session")
+            # This also covers a session that simply timed out, which is
+            # now an ordinary thing to happen. The page turns it into a new
+            # session and says so out loud: a screen reader user must never
+            # be left typing into an editor that has quietly stopped
+            # answering.
+            raise HTTPException(status_code=404, detail="unknown or expired session")
         return session
 
-    def view(session_id: str, session: _Session, result: Result) -> View:
-        return View(
-            session=session_id,
-            text=result.text,
-            position=result.position,
-            speech=result.speech,
-            mathml=session.mathml(),
-        )
+    def view(session_id: str, payload: str) -> View:
+        """The bridge's JSON, plus the id this session is reached by."""
+        return View(session=session_id, **json.loads(payload))
 
     @app.get("/", response_class=HTMLResponse)
     def index(language: str | None = None) -> str:
@@ -130,36 +211,30 @@ def create_app() -> FastAPI:
             profile=profile,
             keymap=keymap or default_keymap,
         )
-        sessions[session_id] = session
-        return view(session_id, session, session.editor.state())
+        sessions.add(session_id, session)
+        return view(session_id, session.bridge.state())
 
     @app.post("/api/session/{session_id}/key", response_model=View)
     def key(session_id: str, request: KeyRequest) -> View:
         session = get_session(session_id)
-        result: Result | None = None
-        if request.keys:
-            result = session.editor.press(request.keys)
-        # The second stroke of a chord ("Ctrl+G, P") arrives as a bare
-        # character; while a chord waits, resolve it as a key stroke
-        # (bindings name letters in upper case) rather than typing it.
-        if result is None and request.character and session.editor.chord_pending():
-            result = session.editor.press(request.character.upper())
-        if result is None and request.character:
-            result = session.editor.type_character(request.character)
-        if result is None:
-            result = session.editor.state()
-        return view(session_id, session, result)
+        return view(session_id, session.bridge.press(request.keys, request.character))
 
     @app.post("/api/session/{session_id}/import", response_model=View)
     def import_xhtml(session_id: str, request: ImportRequest) -> View:
         session = get_session(session_id)
         try:
-            nodes = MathMLFilter(session.editor.catalog).from_xhtml(request.xhtml)
-        except FilterError as error:
+            return view(session_id, session.bridge.import_xhtml(request.xhtml))
+        except BridgeError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
-        return view(session_id, session, session.editor.load(nodes))
 
-    def _download(content: str, name: str, media_type: str) -> PlainTextResponse:
+    def _export(session_id: str, what: str, name: str, media_type: str) -> PlainTextResponse:
+        session = get_session(session_id)
+        try:
+            content = session.bridge.export(what)
+        except BridgeError as error:
+            # The only way an export refuses: no braille source for this
+            # language, which is a conflict rather than a bad request.
+            raise HTTPException(status_code=409, detail=str(error)) from error
         return PlainTextResponse(
             content,
             media_type=media_type,
@@ -168,37 +243,23 @@ def create_app() -> FastAPI:
 
     @app.get("/api/session/{session_id}/export.xhtml")
     def export_xhtml(session_id: str) -> PlainTextResponse:
-        session = get_session(session_id)
-        content = session.exporter.xhtml_document_lines(
-            session.editor.document.lines, language=session.language
-        )
-        return _download(content, "document.xhtml", "application/xhtml+xml")
+        return _export(session_id, "xhtml", "document.xhtml", "application/xhtml+xml")
 
     @app.get("/api/session/{session_id}/export.brl")
     def export_braille(session_id: str) -> PlainTextResponse:
-        session = get_session(session_id)
-        if session.transcriber is None:
-            raise HTTPException(
-                status_code=409,
-                detail=f"no braille source for language {session.language!r}",
-            )
-        # Unicode braille (U+2800…), the modern portable form.
-        return _download(session.braille() + "\n", "document.brl", "text/plain; charset=utf-8")
+        return _export(session_id, "brl", "document.brl", "text/plain; charset=utf-8")
 
     @app.get("/api/session/{session_id}/export.dvm")
     def export_dvm(session_id: str) -> PlainTextResponse:
-        session = get_session(session_id)
-        content = to_dvm(session.editor.document.lines, language=session.language)
-        return _download(content, "document.dvm", "application/json; charset=utf-8")
+        return _export(session_id, "dvm", "document.dvm", "application/json; charset=utf-8")
 
     @app.post("/api/session/{session_id}/open", response_model=View)
     def open_dvm(session_id: str, request: OpenRequest) -> View:
         session = get_session(session_id)
         try:
-            document = from_dvm(request.dvm)
-        except DvmError as error:
+            return view(session_id, session.bridge.open(request.dvm))
+        except BridgeError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
-        return view(session_id, session, session.editor.load_lines(document.lines))
 
     @app.get("/favicon.ico")
     def favicon() -> FileResponse:

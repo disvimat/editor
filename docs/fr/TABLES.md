@@ -34,6 +34,7 @@ Toutes les tables ont la même forme :
 | `keys_signs.json` | A2 | signe ou structure → frappe |
 | `keys_commands.json` | A3 | commande → frappe |
 | `keys_numpad.json` | A4 | équivalents du pavé numérique |
+| `keys_platform.json` | A2-A4 | nom canonique de frappe → ce qu'envoient wx et le navigateur |
 | `profiles.json` | A7 | profils → niveau maximal et verrou de calculatrice |
 | `glyphs.json` | B1 | glyphe et gabarit linéaire |
 | `labels.<langue>.json` | B2 | étiquette orale (avec `parts` pour les structures) |

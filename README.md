@@ -61,6 +61,28 @@ integrity tests will tell you if anything is missing. See
 .venv/bin/pytest            # tests
 ```
 
+The web client is the one part that does not run under Python. It is
+**TypeScript** under `src/web-client/`; what ships is the bundle built from
+it at `src/disvimat/web/static/editor.js`, which is committed so that
+installing the Python package is enough to run the editor — a teacher
+starting it from `arrancar.bat` needs no Node. The tests build first and
+then evaluate that bundle against the real page in jsdom, so they always
+exercise what ships:
+
+```bash
+npm install
+npm run typecheck
+python -m build --wheel -o dist   # for the Pyodide tests
+npm test
+```
+
+Some of those tests run the core **in WebAssembly**: Pyodide is CPython
+compiled to WASM, so the wheel built above is the same Python package the
+desktop runs, answering in a browser with no server behind it. Pyodide runs
+under Node too, so this needs no headless browser. Without a wheel in
+`dist/` they skip; `DISVIMAT_REQUIRE_WHEEL=1` turns that skip into a
+failure, which is what CI sets.
+
 Branch workflow: work happens on a topic branch, is merged into `dev` for
 testing (continuous integration plus manual NVDA checks), and only reaches
 `main` once validated.

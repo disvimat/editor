@@ -32,6 +32,7 @@ Todas las tablas tienen la misma forma:
 | `keys_signs.json` | A2 | signo o estructura → pulsación |
 | `keys_commands.json` | A3 | comando → pulsación |
 | `keys_numpad.json` | A4 | alternativas del bloque numérico |
+| `keys_platform.json` | A2-A4 | nombre canónico de pulsación → lo que envían wx y el navegador |
 | `profiles.json` | A7 | perfiles → nivel máximo y bloqueo de calculadora |
 | `glyphs.json` | B1 | glifo y plantilla lineal |
 | `labels.<idioma>.json` | B2 | etiqueta hablada (con `parts` para estructuras) |

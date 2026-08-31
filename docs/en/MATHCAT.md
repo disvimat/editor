@@ -94,11 +94,18 @@ directory on the Python path.
   fall back to English for many expressions), so we keep French on our own
   tables for now. When the French rules mature, adding `"fr"` to
   `SPEECH_LANGUAGES` is the only change needed.
-- **Global singleton.** The MathCAT binding holds one global configuration
-  per process. That is fine for the desktop (one language per run). On the
-  web, concurrent sessions in *different* languages could interfere; a
-  single-language deployment avoids it. A per-process lock or worker
-  affinity is the fix if multi-language web use becomes important.
+- **Global singleton — fixed.** The MathCAT binding holds one global
+  configuration per process. That is harmless on the desktop (one language
+  per run), but on the web every session builds its own backend against
+  that one library, and the interference was not hypothetical: the last
+  session created took the language away from all the others. Verified
+  against real MathCAT, a Spanish reader was handed "1 and 1 half" and
+  **UEB** braille instead of CMU as soon as anyone opened an English
+  session — wrong braille presented as right, which is exactly what the
+  policy below forbids. No backend now keeps state inside the library:
+  every call re-applies its own preferences and reads the answer without
+  letting go of a module lock. Re-applying costs 0.0012 ms against 0.22 ms
+  for the reading itself.
 
 ## Braille policy
 

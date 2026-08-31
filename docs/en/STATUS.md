@@ -25,12 +25,12 @@ tables, modules A10/B7).
 |---|---|---|
 | A1 Unicode/MathML → DisvimatEditor filter | **done** | Round trip verified by tests |
 | A2 signs and structures → key strokes | **done** | `keys_signs.json`; strokes may be **chords** (`"Ctrl+G, P"`, the EDICO convention) resolved by a small state machine |
-| A3 commands → key strokes | **partial** | Table done; the *conditions* grammar is not implemented (the `condition` field exists and conditional entries are ignored) |
+| A3 commands → key strokes | **partial** | Table done; the *conditions* grammar is not implemented. The `condition` field exists but `Keyboard` loads only unconditional entries, so a conditional binding would do nothing — neither work nor complain. Until the grammar exists, `integrity.unsupported_conditions` **fails the build** when a table uses it, rather than letting the binding go quiet |
 | — keyboard profiles and user reassignment | **done** | Compatibility profiles (`data/keymaps/`, Lambda/EDICO) load over the defaults; a per-user keymap (`$DISVIMAT_USER_KEYMAP` or `~/.disvimat/user_keys.json`) loads last and wins. The `rebind` tool reassigns a key with conflict detection (refuses unknown commands and chord overlaps, warns on stolen strokes) |
-| A4 alternative keys (numeric keypad) | **partial** | Four bindings only; the full keypad scheme is pending |
+| A4 alternative keys (numeric keypad) | **partial** | Four bindings only; the full keypad scheme is pending. They now work on **both** interfaces: the browser reports the keypad's `/` as key `"/"` like the main row, so the web read it as a division sign while the desktop inserted a fraction. Both adapters now derive their key names from `keys_platform.json` |
 | A5 script / add-on designer | **done** | [Add-ons](ADDONS.md): a `register(registry)` function adds commands (key, speech, code) and exporters, found as installed packages or as `.py` files in `DISVIMAT_ADDONS`. Failures are contained |
 | A6 help file (editable, per language) | **pending** | |
-| A7 user profile configurator | **partial** | `profiles.json` limits elements per level and locks the calculator; there is no editing interface for profiles |
+| A7 user profile configurator | **partial** | `profiles.json` limits elements per level and locks the calculator, and **the profile travels inside the `.dvm`**: opening a document builds the editor that document describes, so an exam prepared by the teacher imposes its restrictions on any machine. An editing interface for profiles is still missing |
 | A8 calculator | **partial** | Exact fraction arithmetic, precedence, powers and exact roots; no variables, functions or trigonometry |
 | A9 calculator locker | **done** | `calculator: false` in the profile (the `exam` profile) |
 | A10 two-dimensional structures (tables, matrices, determinants) | **partial** | Matrices: insert (`Ctrl+Shift+M`), grid navigation, add row/column (`Alt+Down`/`Alt+Right`), read row by row, MathML `<mtable>` in and out, `.dvm`. Determinants/tables reuse the same node |
@@ -104,14 +104,39 @@ These are not in the original module list but matter for real use:
    desktop now speaks every action through the screen reader and sends
    braille to the display. A dedicated add-on is still needed for BR8
    keyboard *input* (E1).
-4. **Web sessions live in memory** and disappear when the process restarts;
-   there is no authentication or persistence.
+4. **Web sessions live in memory.** They no longer grow without bound: they
+   expire when idle (`DISVIMAT_SESSION_TTL`, two hours by default) and
+   their number is capped (`DISVIMAT_MAX_SESSIONS`, 500), least recently
+   used discarded first. When a session expires the page opens a new one
+   and **announces it aloud**, so nobody is left typing into an editor that
+   has gone silent. There is still no authentication or persistence: the
+   document is lost when the process restarts.
 5. **Braille needs expert validation.** The engine is finished, the values
    are not: they must be checked against the CBE mathematical braille
    standard before any classroom use.
-6. **Automated accessibility testing is missing.** Table integrity is
-   enforced in CI, but there is no axe-core pass on the web page and no
-   scripted NVDA testing; accessibility is verified by hand.
+6. **Automated accessibility testing: half of it now exists.** The
+   desktop's contract with the screen reader **is** checked in CI: a
+   **Windows** job with wxPython builds the real window and verifies that
+   every action is spoken (not merely shown on the status line), that the
+   caret lands where the core put it, that the current line reaches the
+   braille display, and that no braille is sent when there is no engine.
+   CI used to run on Linux only, without wxPython, so those tests skipped
+   themselves entirely and the build went green having tested nothing;
+   `DISVIMAT_REQUIRE_DESKTOP=1` now turns that skip into a failure wherever
+   wxPython is meant to be present.
+   The **web** too: the structure a screen reader depends on is checked
+   against the rendered page (a single `aria-live` region, the status bar
+   deliberately outside it, `role="application"` with a name and
+   instructions, `aria-*` references that resolve, unique ids, a skip link
+   that lands somewhere, heading order, zoom allowed, `lang` per language).
+   And `editor.js` went from no tests at all to a **vitest + jsdom** suite
+   that evaluates the real file inside the real page and drives it with
+   events: the keypad's `/`, the order of key strokes (one request in
+   flight at a time), the live region, and recovering from an expired
+   session out loud.
+   Still missing: an **axe-core pass in a real browser** — what jsdom
+   cannot give is computed contrast and visibility, so running it there
+   would be false confidence — and scripted NVDA testing (Guidepup).
 
 ## Suggested next steps
 

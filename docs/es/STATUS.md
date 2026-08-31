@@ -25,12 +25,12 @@ tablas, módulos A10/B7).
 |---|---|---|
 | A1 filtro Unicode/MathML → DisvimatEditor | **hecho** | Ida y vuelta verificada por tests |
 | A2 signos y estructuras → pulsaciones | **hecho** | `keys_signs.json`; las pulsaciones pueden ser **acordes** (`"Ctrl+G, P"`, la convención de EdiCo) resueltos por una pequeña máquina de estados |
-| A3 comandos → pulsaciones | **parcial** | Tabla hecha; falta la gramática de *condicionantes* (el campo `condition` existe y las entradas condicionales se ignoran) |
+| A3 comandos → pulsaciones | **parcial** | Tabla hecha; falta la gramática de *condicionantes*. El campo `condition` existe pero `Keyboard` solo carga entradas incondicionales, así que una asignación condicional no haría nada — ni funcionar ni protestar. Hasta que exista la gramática, `integrity.unsupported_conditions` **rompe la build** si alguna tabla la usa, en vez de dejar que la asignación se pierda en silencio |
 | — perfiles de teclado y reasignación del usuario | **hecho** | Los perfiles de compatibilidad (`data/keymaps/`, Lambda/EdiCo) se cargan sobre las tablas por defecto; un mapa de teclas por usuario (`$DISVIMAT_USER_KEYMAP` o `~/.disvimat/user_keys.json`) se carga el último y gana. La herramienta `rebind` reasigna una tecla con detección de conflictos (rechaza comandos inexistentes y solapamientos de acordes, avisa al robar una pulsación) |
-| A4 teclas alternativas (bloque numérico) | **parcial** | Solo cuatro asignaciones; falta el esquema completo |
+| A4 teclas alternativas (bloque numérico) | **parcial** | Solo cuatro asignaciones; falta el esquema completo. Ya funcionan en **las dos** interfaces: el navegador informa del `/` del bloque numérico como tecla `"/"`, igual que el de la fila principal, así que la web lo leía como signo de división mientras el escritorio insertaba una fracción. Ambos adaptadores sacan ahora los nombres de `keys_platform.json` |
 | A5 diseñador de scripts o add-ons | **hecho** | [Add-ons](ADDONS.md): una función `register(registry)` añade comandos (tecla, voz, código) y exportadores, descubiertos como paquetes instalados o como `.py` en `DISVIMAT_ADDONS`. Los fallos quedan contenidos |
 | A6 archivo de ayuda (editable, por idioma) | **pendiente** | |
-| A7 configurador de perfiles | **parcial** | `profiles.json` limita elementos por nivel y bloquea la calculadora; no hay interfaz para editar perfiles |
+| A7 configurador de perfiles | **parcial** | `profiles.json` limita elementos por nivel y bloquea la calculadora, y **el perfil viaja dentro del `.dvm`**: abrir un documento construye el editor que ese documento describe, así que un examen preparado por el profesor impone sus restricciones en cualquier equipo. Falta una interfaz para editar perfiles |
 | A8 calculadora | **parcial** | Aritmética exacta de fracciones, precedencia, potencias y raíces exactas; sin variables, funciones ni trigonometría |
 | A9 bloqueador de calculadora | **hecho** | `calculator: false` en el perfil (perfil `exam`) |
 | A10 estructuras bidimensionales (tablas, matrices, determinantes) | **parcial** | Matrices: insertar (`Ctrl+Shift+M`), navegación por rejilla, añadir fila/columna (`Alt+Abajo`/`Alt+Derecha`), lectura por filas, MathML `<mtable>` ida y vuelta, `.dvm`. Determinantes/tablas reutilizan el mismo nodo |
@@ -105,14 +105,39 @@ No están en la lista original de módulos, pero importan para el uso real:
    **Corregido:** el escritorio ya habla cada acción por el lector de
    pantalla y envía braille a la línea. Sigue faltando un add-on propio
    para la *entrada* por teclado BR8 (E1).
-4. **Las sesiones web viven en memoria** y desaparecen al reiniciar el
-   proceso; no hay autenticación ni persistencia.
+4. **Las sesiones web viven en memoria.** Ya no crecen sin límite: caducan
+   por inactividad (`DISVIMAT_SESSION_TTL`, dos horas por defecto) y su
+   número está acotado (`DISVIMAT_MAX_SESSIONS`, 500), descartando la menos
+   usada. Cuando una sesión caduca la página abre otra y **lo anuncia por
+   voz**, para no dejar al usuario escribiendo en un editor mudo. Sigue sin
+   haber autenticación ni persistencia: al reiniciar el proceso se pierde
+   el documento.
 5. **El braille necesita validación experta.** El motor está terminado; los
    valores no: deben contrastarse con la signografía matemática de la CBE
    antes de cualquier uso en el aula.
-6. **Faltan pruebas automáticas de accesibilidad.** La integridad de las
-   tablas se verifica en CI, pero no hay pasada de axe-core sobre la página
-   web ni pruebas de NVDA guionizadas; la accesibilidad se verifica a mano.
+6. **Pruebas automáticas de accesibilidad: a medias.** El contrato del
+   escritorio con el lector de pantalla **sí** se verifica ahora en CI: un
+   trabajo en **Windows** con wxPython construye la ventana real y comprueba
+   que cada acción se habla (no solo se muestra en la barra de estado), que
+   el caret cae donde dijo el núcleo, que la línea actual llega a la línea
+   braille y que no se envía braille sin motor. Antes la CI corría solo en
+   Linux sin wxPython, así que esas pruebas se saltaban enteras y el build
+   salía verde sin haber probado nada; `DISVIMAT_REQUIRE_DESKTOP=1` convierte
+   ahora ese salto en un fallo donde wxPython debe estar.
+   La **web** también: la estructura que un lector de pantalla necesita se
+   comprueba sobre la página renderizada (una sola región `aria-live`, la
+   barra de estado deliberadamente fuera de ella, `role="application"` con
+   nombre e instrucciones, referencias `aria-*` que resuelven, ids únicos,
+   enlace de salto con destino, jerarquía de encabezados, zoom permitido,
+   `lang` por idioma). Y `editor.js` pasó de cero pruebas a una suite en
+   **vitest + jsdom** que evalúa el fichero real dentro de la página real y
+   lo conduce con eventos: el `/` del bloque numérico, el orden de las
+   pulsaciones (una sola petición en vuelo), la región viva y la
+   recuperación hablada de una sesión caducada.
+   Sigue faltando: una pasada de **axe-core en un navegador de verdad**
+   —lo que jsdom no puede dar es contraste ni visibilidad calculada, así
+   que hacerlo ahí sería falsa confianza— y pruebas de NVDA guionizadas
+   (Guidepup).
 
 ## Próximos pasos sugeridos
 

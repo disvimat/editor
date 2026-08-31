@@ -23,6 +23,7 @@ to the table-driven engines when the library is absent.
 """
 
 import os
+import threading
 from collections.abc import Callable, Sequence
 from importlib import import_module
 from pathlib import Path
@@ -53,6 +54,20 @@ DEFAULT_SPEECH_STYLE = "ClearSpeak"
 
 #: Environment variable pointing at MathCAT's ``Rules`` directory.
 RULES_DIR_ENV = "MATHCAT_RULES_DIR"
+
+#: Serialises every use of the MathCAT binding. The binding is a module —
+#: one per process — and its preferences are shared, so two backends in
+#: different languages would otherwise take the settings from each other.
+_LIBRARY_LOCK = threading.RLock()
+
+#: Which library and rules directory this thread has been pointed at.
+#:
+#: MathCAT keeps its state **per thread**: ``SetRulesDir`` on one thread
+#: does not make the preferences exist on another, where ``SetPreference``
+#: then fails with "Language is an unknown MathCAT preference". A server
+#: answers requests from a pool of threads, so the rules have to be set on
+#: whichever thread is asking, not once at construction.
+_THREAD = threading.local()
 
 
 class MathCATUnavailable(RuntimeError):
@@ -118,6 +133,22 @@ class MathCATBackend:
 
     Satisfies both :class:`~disvimat.core.output.ExpressionReader` and
     :class:`~disvimat.core.output.BrailleProvider`.
+
+    **The library is shared, its settings are global.** MathCAT is a
+    module, so there is one of it per process, and ``SetPreference`` writes
+    settings that belong to nobody in particular. On the desktop that is
+    harmless — one process, one reader. On the web, where every session
+    builds its own backend, the last session to be created used to take the
+    language away from all the others: a Spanish reader would be handed
+    English speech and UEB braille as soon as anyone opened an English
+    session, silently, which is exactly what this project promises never
+    happens (see ``docs/*/BRAILLE.md``).
+
+    So a backend owns no state inside the library. It claims it instead:
+    every call re-applies its own preferences and reads the answer without
+    letting go of :data:`_LIBRARY_LOCK` in between. Re-applying costs
+    0.0012 ms against 0.22 ms for the reading itself, so the simple and
+    obviously correct arrangement is also cheap enough not to matter.
     """
 
     def __init__(
@@ -143,11 +174,10 @@ class MathCATBackend:
         rules = rules_dir or find_rules_dir()
         if rules is None:
             raise MathCATUnavailable("MathCAT rules directory not found")
-        self._library.SetRulesDir(str(rules))
-        self._library.SetPreference("Language", language)
-        self._library.SetPreference("SpeechStyle", speech_style)
-        if self.braille_code:
-            self._library.SetPreference("BrailleCode", self.braille_code)
+        self._speech_style = speech_style
+        self._rules = str(rules)
+        with _LIBRARY_LOCK:
+            self._claim()
 
     @property
     def supports_braille(self) -> bool:
@@ -157,17 +187,42 @@ class MathCATBackend:
     # --- output ports ---------------------------------------------------------
 
     def read(self, nodes: list[Node]) -> str:
-        self._load(nodes)
-        return self._library.GetSpokenText().strip()
+        mathml = self._mathml_of(nodes)  # our own work: no need for the lock
+        with _LIBRARY_LOCK:
+            self._claim()
+            self._library.SetMathML(mathml)
+            return self._library.GetSpokenText().strip()
 
     def unicode(self, nodes: list[Node]) -> str:
-        self._load(nodes)
-        return self._library.GetBraille("")
+        mathml = self._mathml_of(nodes)
+        with _LIBRARY_LOCK:
+            self._claim()
+            self._library.SetMathML(mathml)
+            return self._library.GetBraille("")
 
     def ascii(self, nodes: list[Node]) -> str:
         return unicode_to_ascii(self.unicode(nodes))
 
     # --- internals ------------------------------------------------------------
 
-    def _load(self, nodes: list[Node]) -> None:
-        self._library.SetMathML(self._mathml_of(nodes))
+    def _claim(self) -> None:
+        """Point the library at this backend's language, on this thread.
+
+        Whoever configured it last does not matter: these settings decide
+        the answer, so they are written again every time, with the lock
+        held from here until the answer has been read back.
+
+        ``SetRulesDir`` comes first on a thread that has not seen it,
+        because the rules are what define which preferences exist, and
+        MathCAT holds them per thread.
+        """
+        # Which library, not just which directory: the tests drive fakes,
+        # and a stale mark would skip the call one of them still needs.
+        configured = (self._library, self._rules)
+        if getattr(_THREAD, "configured", None) != configured:
+            self._library.SetRulesDir(self._rules)
+            _THREAD.configured = configured
+        self._library.SetPreference("Language", self.language)
+        self._library.SetPreference("SpeechStyle", self._speech_style)
+        if self.braille_code:
+            self._library.SetPreference("BrailleCode", self.braille_code)

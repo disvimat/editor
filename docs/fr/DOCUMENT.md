@@ -37,8 +37,24 @@ perte. C'est du JSON : inspectable et à diff propre dans git.
 }
 ```
 
-- `language` et `profile` consignent avec quoi le document a été écrit, pour
-  rétablir la bonne parole, le bon braille et le bon niveau.
+- `language` et `profile` ne sont pas une note de bas de page : **ouvrir un
+  document construit l'éditeur que ce document décrit**. C'est là le modèle
+  de l'examen — l'enseignant enregistre un `.dvm` avec `"profile": "exam"`,
+  l'élève l'ouvre sur n'importe quel système et y trouve le niveau limité
+  et la calculatrice verrouillée (A7/A9) sans que cette machine sache quoi
+  que ce soit de cet examen. L'enregistrement réécrit le profil : la
+  restriction survit à l'aller-retour au lieu de durer une seule séance.
+- `language` s'impose tout autant, pour une raison précise : le braille
+  mathématique est normatif et diffère selon les pays ; lire un document
+  espagnol sous un éditeur anglais le transcrirait en UEB et non en CMU.
+  La langue de l'**interface** ne change pas : les menus ne doivent pas
+  bouger sous les doigts de qui utilise un lecteur d'écran.
+- Un profil que l'installation ne connaît pas est refusé comme document
+  malformé, sans planter.
+- Le verrou est une convention de classe, pas une barrière
+  cryptographique : un `.dvm` est du JSON lisible, éditable par qui le
+  souhaite. Ce qui est rendu, c'est le fichier, et le trafiquer laisse une
+  trace.
 - Chaque nœud est l'un de `{"char": …}`, `{"sign": <id>}` ou
   `{"structure": <id>, "slots": [...]}` ; les ids sont ceux du catalogue,
   les mêmes identifiants stables que tout le reste.
