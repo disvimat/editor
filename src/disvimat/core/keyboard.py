@@ -59,8 +59,11 @@ class Keyboard:
         for table in tables:
             for entry in table.entries:
                 # The A3 conditions grammar is still pending; only
-                # unconditional entries load for now. A later binding for the
-                # same sequence wins, which is how keymaps override defaults.
+                # unconditional entries load. A conditional one would be
+                # dropped here without a word, so integrity.unsupported_
+                # conditions fails the build before a table can rely on it.
+                # A later binding for the same sequence wins, which is how
+                # keymaps override defaults.
                 if entry.condition is None:
                     self._add(parse_chord(entry.keys), catalog[entry.id])
 
