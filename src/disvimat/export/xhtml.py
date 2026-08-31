@@ -7,7 +7,7 @@ and letters are grouped into ``<mn>`` and ``<mi>``.
 
 import xml.etree.ElementTree as ET
 
-from disvimat.core.document import Character, Node, Sign, Structure
+from disvimat.core.document import Character, Matrix, Node, Sign, Structure
 from disvimat.core.tables import Catalog
 
 MATHML_NS = "http://www.w3.org/1998/Math/MathML"
@@ -20,7 +20,7 @@ _XHTML_TEMPLATE = """<?xml version="1.0" encoding="utf-8"?>
 <title>{title}</title>
 </head>
 <body>
-<p>{mathml}</p>
+{body}
 </body>
 </html>
 """
@@ -45,9 +45,20 @@ class XHTMLExporter:
     def xhtml_document(
         self, nodes: list[Node], title: str = "DISVIMAT document", language: str = "en"
     ) -> str:
-        """A complete XHTML document with the expression as MathML."""
-        math_text = ET.tostring(self.mathml(nodes), encoding="unicode")
-        return _XHTML_TEMPLATE.format(title=title, language=language, mathml=math_text)
+        """A complete XHTML document with one expression (a single line)."""
+        return self.xhtml_document_lines([nodes], title=title, language=language)
+
+    def xhtml_document_lines(
+        self,
+        lines: list[list[Node]],
+        title: str = "DISVIMAT document",
+        language: str = "en",
+    ) -> str:
+        """A complete XHTML document with one ``<p><math>`` per line."""
+        paragraphs = "\n".join(
+            f"<p>{ET.tostring(self.mathml(line), encoding='unicode')}</p>" for line in lines
+        )
+        return _XHTML_TEMPLATE.format(title=title, language=language, body=paragraphs)
 
     # --- internals ------------------------------------------------------------
 
@@ -63,6 +74,8 @@ class XHTMLExporter:
                 if symbol is None:
                     raise ValueError(f"sign {node.element_id!r} has no unicode")
                 ET.SubElement(parent, "mo").text = symbol
+            elif isinstance(node, Matrix):
+                self._matrix(parent, node)
             else:
                 self._structure(parent, node)
             index += 1
@@ -94,6 +107,15 @@ class XHTMLExporter:
             return
         for slot in structure.slots:
             self._slot(container, slot)
+
+    def _matrix(self, parent: ET.Element, matrix: Matrix) -> None:
+        """Export a matrix as MathML ``<mtable><mtr><mtd>…``."""
+        table = ET.SubElement(parent, "mtable")
+        for row in range(matrix.rows):
+            tr = ET.SubElement(table, "mtr")
+            for col in range(matrix.cols):
+                td = ET.SubElement(tr, "mtd")
+                self._fill(td, matrix.cell(row, col))
 
     def _slot(self, parent: ET.Element, nodes: list[Node]) -> None:
         """A slot is a single child: wrapped in ``<mrow>`` when needed."""

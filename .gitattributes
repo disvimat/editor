@@ -1,0 +1,12 @@
+# One convention for the whole repository.
+#
+# The tree had 100 files with LF and 15 with CRLF and no rule to say which
+# was right, so any tool that rewrote a file whole produced a diff of
+# hundreds of lines that were not changes at all.
+#
+# Git decides for itself what is text; every text file is stored with LF.
+* text=auto eol=lf
+
+# Batch files are the exception: cmd.exe is happier with CRLF, so they are
+# checked out that way on every platform.
+*.bat text eol=crlf

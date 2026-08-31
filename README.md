@@ -17,6 +17,8 @@ expression on screen, as speech, in braille, and as exportable files.
 | What is done, what is missing | [STATUS](docs/en/STATUS.md) | [STATUS](docs/es/STATUS.md) | [STATUS](docs/fr/STATUS.md) |
 | External speech and braille engine | [MATHCAT](docs/en/MATHCAT.md) | [MATHCAT](docs/es/MATHCAT.md) | [MATHCAT](docs/fr/MATHCAT.md) |
 | How braille is produced | [BRAILLE](docs/en/BRAILLE.md) | [BRAILLE](docs/es/BRAILLE.md) | [BRAILLE](docs/fr/BRAILLE.md) |
+| Document format (multi-line, `.dvm`) | [DOCUMENT](docs/en/DOCUMENT.md) | [DOCUMENT](docs/es/DOCUMENT.md) | [DOCUMENT](docs/fr/DOCUMENT.md) |
+| Extending it (add-ons) | [ADDONS](docs/en/ADDONS.md) | [ADDONS](docs/es/ADDONS.md) | [ADDONS](docs/fr/ADDONS.md) |
 
 The original project brief, in Spanish, is preserved at
 [docs/BRIEF.es.md](docs/BRIEF.es.md); it is the source of the module
@@ -58,6 +60,28 @@ integrity tests will tell you if anything is missing. See
 .venv/bin/mypy              # strict typing on the core
 .venv/bin/pytest            # tests
 ```
+
+The web client is the one part that does not run under Python. It is
+**TypeScript** under `src/web-client/`; what ships is the bundle built from
+it at `src/disvimat/web/static/editor.js`, which is committed so that
+installing the Python package is enough to run the editor — a teacher
+starting it from `arrancar.bat` needs no Node. The tests build first and
+then evaluate that bundle against the real page in jsdom, so they always
+exercise what ships:
+
+```bash
+npm install
+npm run typecheck
+python -m build --wheel -o dist   # for the Pyodide tests
+npm test
+```
+
+Some of those tests run the core **in WebAssembly**: Pyodide is CPython
+compiled to WASM, so the wheel built above is the same Python package the
+desktop runs, answering in a browser with no server behind it. Pyodide runs
+under Node too, so this needs no headless browser. Without a wheel in
+`dist/` they skip; `DISVIMAT_REQUIRE_WHEEL=1` turns that skip into a
+failure, which is what CI sets.
 
 Branch workflow: work happens on a topic branch, is merged into `dev` for
 testing (continuous integration plus manual NVDA checks), and only reaches

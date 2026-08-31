@@ -8,35 +8,48 @@ caret moves) and in the status line. Interface strings come from the
 """
 
 import os
+from pathlib import Path
 
 import wx
 
-from disvimat.backends import create_outputs
-from disvimat.core.editor import Editor, Result, create_editor
+from disvimat.backends import Workspace, create_workspace, open_document
+from disvimat.core.dvm import DvmError, to_dvm
+from disvimat.core.editor import Editor, Result
 from disvimat.core.filters.mathml import FilterError, MathMLFilter
 from disvimat.core.output import BrailleProvider
-from disvimat.core.tables import Catalog, data_dir
+from disvimat.core.tables import PlatformKeyEntry, Table, data_dir, load_table
 from disvimat.core.ui_text import UIText
+from disvimat.desktop.screen_reader import SpeechOutput, create_output
 from disvimat.export.xhtml import XHTMLExporter
 
-#: Special keys -> canonical table name.
-_SPECIAL_KEYS = {
-    wx.WXK_LEFT: "Left",
-    wx.WXK_RIGHT: "Right",
-    wx.WXK_UP: "Up",
-    wx.WXK_DOWN: "Down",
-    wx.WXK_HOME: "Home",
-    wx.WXK_END: "End",
-    wx.WXK_TAB: "Tab",
-    wx.WXK_DELETE: "Delete",
-    wx.WXK_BACK: "Backspace",
-    wx.WXK_RETURN: "Return",
-    wx.WXK_NUMPAD_ENTER: "Return",
-    wx.WXK_NUMPAD_ADD: "NumAdd",
-    wx.WXK_NUMPAD_SUBTRACT: "NumSubtract",
-    wx.WXK_NUMPAD_MULTIPLY: "NumMultiply",
-    wx.WXK_NUMPAD_DIVIDE: "NumDivide",
-}
+
+def _special_keys(directory: Path | None = None) -> dict[int, str]:
+    """wx key code -> canonical stroke name, from ``keys_platform.json``.
+
+    The table is the single place where a canonical name is tied to what a
+    platform actually sends, so the desktop and the web cannot disagree
+    about which physical key does what.
+    """
+    table: Table[PlatformKeyEntry] = load_table(
+        (directory or data_dir()) / "keys_platform.json", PlatformKeyEntry
+    )
+    return {getattr(wx, name): entry.canonical for entry in table.entries for name in entry.wx}
+
+
+#: Special keys -> canonical table name (built once, at import).
+_SPECIAL_KEYS = _special_keys()
+
+
+def _finished_word(result: Result) -> str:
+    """The word the user has just closed with a space, if any.
+
+    Screen readers announce typed characters but not the word being
+    completed, which is what a writer wants to hear when pressing space.
+    """
+    before = result.text[: result.position].rstrip()
+    if not before:
+        return ""
+    return before.split()[-1]
 
 
 def canonical_keys(event: wx.KeyEvent) -> str | None:
@@ -81,12 +94,31 @@ class BrailleWindow(wx.Frame):
 class EditorWindow(wx.Frame):
     """The accessible linear editor window."""
 
-    def __init__(self, editor: Editor, transcriber: BrailleProvider | None, text: UIText) -> None:
+    def __init__(
+        self,
+        editor: Editor,
+        transcriber: BrailleProvider | None,
+        text: UIText,
+        *,
+        language: str = "en",
+        profile: str | None = None,
+        speech_backend: str = "tables",
+        braille_backend: str = "none",
+        speech: SpeechOutput | None = None,
+    ) -> None:
         super().__init__(None, title=text("app_title"))
         self._editor = editor
         self._transcriber = transcriber
         self._text = text
+        self._language = language
+        self._profile = profile
+        # The screen reader does not read the status bar by itself, so every
+        # action is spoken here as well as shown.
+        self._speech: SpeechOutput = speech if speech is not None else create_output()
+        self._speech_backend = speech_backend
+        self._braille_backend = braille_backend
         self._braille: BrailleWindow | None = None
+        self._keymap = os.environ.get("DISVIMAT_KEYMAP")
         panel = wx.Panel(self)
         self._document = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY)
         self._document.SetName(text("document"))
@@ -99,6 +131,22 @@ class EditorWindow(wx.Frame):
         self._document.Bind(wx.EVT_CHAR, self._on_character)
         self._document.SetFocus()
         self.SetSize((900, 400))
+
+    def _adopt(self, workspace: Workspace) -> None:
+        """Take on the editor a newly opened document asks for.
+
+        Language and profile come from the document, so opening one
+        replaces the editor rather than pouring new lines into the old one:
+        that is what applies an exam file's restrictions (A7/A9). The
+        interface language is deliberately left alone — the menus should
+        not change under a screen reader user mid-session.
+        """
+        self._editor = workspace.editor
+        self._transcriber = workspace.braille
+        self._language = workspace.language
+        self._profile = workspace.profile
+        self._speech_backend = workspace.speech_backend
+        self._braille_backend = workspace.braille_backend
 
     # --- input ---------------------------------------------------------------
 
@@ -117,46 +165,169 @@ class EditorWindow(wx.Frame):
             event.Skip()
             return
         character = chr(code)
+        # The second stroke of a chord ("Ctrl+G, P") is a bare letter that
+        # would otherwise be typed. While a chord waits, route it as a key
+        # stroke (bindings name letters in upper case) instead of inserting it.
+        if self._editor.chord_pending():
+            completed = self._editor.press(character.upper())
+            if completed is not None:
+                self._apply(completed)
+                return
         result = self._editor.press(character)
-        if result is None and (character.isalnum() or character == " "):
-            result = self._editor.type_character(character)
-        if result is not None:
+        if result is not None:  # an assigned sign or structure
             self._apply(result)
-        else:
-            event.Skip()
+            return
+        if character.isalnum() or character == " ":
+            typed = self._editor.type_character(character)
+            # The screen reader echoes typed characters itself, so repeating
+            # them would double up. What it cannot know is the word the user
+            # has just finished, which is announced when space closes it.
+            self._apply(typed, speak=_finished_word(typed) if character == " " else "")
+            return
+        event.Skip()
 
-    def _apply(self, result: Result) -> None:
+    def _apply(self, result: Result, *, speak: str | None = None) -> None:
+        """Reflect a result. ``speak`` overrides the spoken text ("" silences)."""
         self._document.ChangeValue(result.text)
         self._document.SetInsertionPoint(result.position)
         self.SetStatusText(result.speech)
+        spoken = result.speech if speak is None else speak
+        if spoken:
+            self._speech.speak(spoken)
         if self._braille is not None and self._braille.IsShown() and self._transcriber:
-            self._braille.show_braille(self._transcriber.unicode(self._editor.document.root))
+            self._braille.show_braille(self._braille_text())
+        if self._transcriber is not None:
+            # Also push the current line to a connected braille display.
+            self._speech.braille(self._transcriber.unicode(self._editor.document.current_line()))
+
+    def _braille_text(self) -> str:
+        """Braille of the whole document, one line per document line."""
+        assert self._transcriber is not None
+        return "\n".join(self._transcriber.unicode(line) for line in self._editor.document.lines)
 
     # --- menu ----------------------------------------------------------------
 
     def _build_menu(self) -> None:
         text = self._text
+        bar = wx.MenuBar()
+
         file_menu = wx.Menu()
-        import_item = file_menu.Append(wx.ID_OPEN, text("menu_import_xhtml") + "\tCtrl+I")
-        export_item = file_menu.Append(wx.ID_SAVEAS, text("menu_export_xhtml") + "\tCtrl+E")
-        export_bra = file_menu.Append(wx.ID_ANY, text("menu_export_bra"))
+        new_item = file_menu.Append(wx.ID_NEW, text("menu_new") + "\tCtrl+N")
+        open_item = file_menu.Append(wx.ID_OPEN, text("menu_open") + "\tCtrl+O")
+        save_item = file_menu.Append(wx.ID_SAVE, text("menu_save") + "\tCtrl+S")
+        file_menu.AppendSeparator()
+        import_item = file_menu.Append(wx.ID_ANY, text("menu_import_xhtml") + "\tCtrl+I")
+        export_item = file_menu.Append(wx.ID_ANY, text("menu_export_xhtml") + "\tCtrl+E")
+        export_braille = file_menu.Append(wx.ID_ANY, text("menu_export_braille"))
         file_menu.AppendSeparator()
         quit_item = file_menu.Append(wx.ID_EXIT, text("menu_quit"))
-        view_menu = wx.Menu()
-        braille_item = view_menu.Append(wx.ID_ANY, text("menu_braille_window") + "\tCtrl+6")
-        bar = wx.MenuBar()
         bar.Append(file_menu, text("menu_file"))
-        bar.Append(view_menu, text("menu_view"))
-        self.SetMenuBar(bar)
+        self.Bind(wx.EVT_MENU, self._new, new_item)
+        self.Bind(wx.EVT_MENU, self._open_dvm, open_item)
+        self.Bind(wx.EVT_MENU, self._save_dvm, save_item)
         self.Bind(wx.EVT_MENU, self._import, import_item)
         self.Bind(wx.EVT_MENU, self._export_xhtml, export_item)
-        self.Bind(wx.EVT_MENU, self._export_bra, export_bra)
-        self.Bind(wx.EVT_MENU, self._toggle_braille, braille_item)
+        self.Bind(wx.EVT_MENU, self._export_braille, export_braille)
         self.Bind(wx.EVT_MENU, lambda _event: self.Close(), quit_item)
+
+        # Edit, Insert and Tools items all run an editor command by its
+        # canonical key stroke, so the menus and the shortcuts never diverge.
+        edit_menu = wx.Menu()
+        self._add_command(edit_menu, "menu_undo", "Ctrl+Z")
+        self._add_command(edit_menu, "menu_redo", "Ctrl+Y")
+        bar.Append(edit_menu, text("menu_edit"))
+
+        insert_menu = wx.Menu()
+        self._add_command(insert_menu, "menu_insert_fraction", "Ctrl+F")
+        self._add_command(insert_menu, "menu_insert_sqrt", "Ctrl+R")
+        self._add_command(insert_menu, "menu_insert_power", "Ctrl+P")
+        bar.Append(insert_menu, text("menu_insert"))
+
+        tools_menu = wx.Menu()
+        self._add_command(tools_menu, "menu_calculate", "Ctrl+Return")
+        self._add_command(tools_menu, "menu_read_line", "Ctrl+Shift+L")
+        bar.Append(tools_menu, text("menu_tools"))
+
+        view_menu = wx.Menu()
+        braille_item = view_menu.Append(wx.ID_ANY, text("menu_braille_window") + "\tCtrl+6")
+        bar.Append(view_menu, text("menu_view"))
+        self.Bind(wx.EVT_MENU, self._toggle_braille, braille_item)
+
+        help_menu = wx.Menu()
+        about_item = help_menu.Append(wx.ID_ABOUT, text("menu_about"))
+        bar.Append(help_menu, text("menu_help"))
+        self.Bind(wx.EVT_MENU, self._about, about_item)
+
+        self.SetMenuBar(bar)
         if self._transcriber is None:
-            # No braille tables for this language: the features stay disabled.
-            export_bra.Enable(False)
+            # No braille source for this language: the features stay disabled.
+            export_braille.Enable(False)
             braille_item.Enable(False)
+
+    def _add_command(self, menu: wx.Menu, label_id: str, keys: str) -> None:
+        """Add a menu item that runs the editor command bound to ``keys``."""
+        item = menu.Append(wx.ID_ANY, self._text(label_id) + f"\t{keys}")
+        self.Bind(wx.EVT_MENU, lambda _event, k=keys: self._run(k), item)
+
+    def _run(self, keys: str) -> None:
+        result = self._editor.press(keys)
+        if result is not None:
+            self._apply(result)
+        self._document.SetFocus()
+
+    def _new(self, _event: wx.CommandEvent) -> None:
+        self._apply(self._editor.load_lines([[]]))
+        self._document.SetFocus()
+
+    def _open_dvm(self, _event: wx.CommandEvent) -> None:
+        text = self._text
+        dialog = wx.FileDialog(
+            self,
+            text("dialog_open"),
+            wildcard=text("filter_dvm") + " (*.dvm)|*.dvm",
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        )
+        if dialog.ShowModal() != wx.ID_OK:
+            return
+        path = dialog.GetPath()
+        try:
+            with open(path, encoding="utf-8") as handle:
+                workspace = open_document(handle.read(), keymap=self._keymap)
+        except (OSError, DvmError) as error:
+            wx.MessageBox(str(error), text("error_open"), wx.ICON_ERROR)
+            return
+        self._adopt(workspace)
+        self._apply(self._editor.state())
+        self._document.SetFocus()
+
+    def _save_dvm(self, _event: wx.CommandEvent) -> None:
+        text = self._text
+        dialog = wx.FileDialog(
+            self,
+            text("dialog_save"),
+            wildcard=text("filter_dvm") + " (*.dvm)|*.dvm",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        )
+        if dialog.ShowModal() != wx.ID_OK:
+            return
+        path = dialog.GetPath()
+        content = to_dvm(
+            self._editor.document.lines, language=self._language, profile=self._profile
+        )
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        self.SetStatusText(text("status_exported", path=path))
+
+    def _about(self, _event: wx.CommandEvent) -> None:
+        from disvimat import __version__
+
+        body = self._text(
+            "about_body",
+            version=__version__,
+            speech=self._speech_backend,
+            braille=self._braille_backend,
+        )
+        wx.MessageBox(body, self._text("menu_about"), wx.ICON_INFORMATION)
 
     def _import(self, _event: wx.CommandEvent) -> None:
         text = self._text
@@ -190,27 +361,29 @@ class EditorWindow(wx.Frame):
             return
         path = dialog.GetPath()
         exporter = XHTMLExporter(self._editor.catalog)
-        content = exporter.xhtml_document(self._editor.document.root)
+        content = exporter.xhtml_document_lines(
+            self._editor.document.lines, language=self._language
+        )
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(content)
         self.SetStatusText(text("status_exported", path=path))
 
-    def _export_bra(self, _event: wx.CommandEvent) -> None:
+    def _export_braille(self, _event: wx.CommandEvent) -> None:
         if self._transcriber is None:
             return
         text = self._text
         dialog = wx.FileDialog(
             self,
-            text("dialog_export_bra"),
-            wildcard=text("filter_bra") + " (*.bra)|*.bra",
+            text("dialog_export_braille"),
+            wildcard=text("filter_braille") + " (*.brl)|*.brl",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if dialog.ShowModal() != wx.ID_OK:
             return
         path = dialog.GetPath()
-        content = self._transcriber.ascii(self._editor.document.root)
-        with open(path, "w", encoding="ascii") as handle:
-            handle.write(content + "\n")
+        # Unicode braille (U+2800…), UTF-8: the modern, portable form.
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(self._braille_text() + "\n")
         self.SetStatusText(text("status_exported", path=path))
 
     def _toggle_braille(self, _event: wx.CommandEvent) -> None:
@@ -221,7 +394,7 @@ class EditorWindow(wx.Frame):
         if self._braille.IsShown():
             self._braille.Hide()
             return
-        self._braille.show_braille(self._transcriber.unicode(self._editor.document.root))
+        self._braille.show_braille(self._braille_text())
         self._braille.Show()
         self._document.SetFocus()
 
@@ -229,13 +402,17 @@ class EditorWindow(wx.Frame):
 def main() -> None:
     language = os.environ.get("DISVIMAT_LANG", "en")
     profile = os.environ.get("DISVIMAT_PROFILE")
-    catalog = Catalog.load(data_dir() / "elements.json")
-    outputs = create_outputs(catalog, language)
+    keymap = os.environ.get("DISVIMAT_KEYMAP")
+    workspace = create_workspace(language=language, profile=profile, keymap=keymap)
     app = wx.App()
     window = EditorWindow(
-        create_editor(language=language, profile=profile, reader=outputs.reader),
-        outputs.braille,
+        workspace.editor,
+        workspace.braille,
         UIText.load(language=language),
+        language=workspace.language,
+        profile=workspace.profile,
+        speech_backend=workspace.speech_backend,
+        braille_backend=workspace.braille_backend,
     )
     window.Show()
     app.MainLoop()

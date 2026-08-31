@@ -33,10 +33,14 @@
     { "id": "next_slot", "type": "command", "category": "navigation" },
     { "id": "delete", "type": "command", "category": "editing" },
     { "id": "backspace", "type": "command", "category": "editing" },
+    { "id": "new_line", "type": "command", "category": "editing" },
     { "id": "undo", "type": "command", "category": "editing" },
     { "id": "redo", "type": "command", "category": "editing" },
     { "id": "read_element", "type": "command", "category": "reading" },
     { "id": "read_line", "type": "command", "category": "reading" },
-    { "id": "calculate", "type": "command", "category": "calculation" }
+    { "id": "calculate", "type": "command", "category": "calculation" },
+    { "id": "matrix", "type": "command", "category": "matrix" },
+    { "id": "matrix_add_row", "type": "command", "category": "matrix" },
+    { "id": "matrix_add_column", "type": "command", "category": "matrix" }
   ]
 }

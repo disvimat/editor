@@ -10,10 +10,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from disvimat.core.addons import MSG_ADDON_FAILED, Registry, load_addons
 from disvimat.core.calculator import CalculationError, Calculator
-from disvimat.core.document import Character, Document, Node, Sign, Structure
-from disvimat.core.elements import SLOT_ID, ElementType
-from disvimat.core.keyboard import Keyboard
+from disvimat.core.document import Character, Document, Matrix, Node, Sign, Structure
+from disvimat.core.elements import SLOT_ID, Element, ElementType
+from disvimat.core.keyboard import Keyboard, State
 from disvimat.core.output import ExpressionReader
 from disvimat.core.presentation import Presenter
 from disvimat.core.speech import Speaker
@@ -26,8 +27,10 @@ from disvimat.core.tables import (
     ProfileEntry,
     Table,
     data_dir,
+    keymap_path,
     language_table_path,
     load_table,
+    user_keymap_path,
 )
 
 #: Message id of the teacher's lock (A9); it lives in the messages table.
@@ -57,6 +60,7 @@ class Editor:
         *,
         calculator_allowed: bool = True,
         reader: ExpressionReader | None = None,
+        addons: Registry | None = None,
     ) -> None:
         self.catalog = catalog
         self.document = Document()
@@ -77,6 +81,7 @@ class Editor:
             "enter_structure": self._cmd_enter,
             "exit_structure": self._cmd_exit,
             "next_slot": self._cmd_next_slot,
+            "new_line": self._cmd_new_line,
             "delete": self._cmd_delete,
             "backspace": self._cmd_backspace,
             "undo": self._cmd_undo,
@@ -84,13 +89,43 @@ class Editor:
             "read_element": self._read_current,
             "read_line": self._cmd_read_line,
             "calculate": self._cmd_calculate,
+            "matrix": self._cmd_matrix,
+            "matrix_add_row": self._cmd_matrix_add_row,
+            "matrix_add_column": self._cmd_matrix_add_column,
         }
+        # Add-on commands join the same dispatch table, so they behave like
+        # built-in ones — key resolution, speech and undo included.
+        self.addons = addons if addons is not None else Registry()
+        for command in self.addons.commands.values():
+            self._commands[command.id] = self._addon_runner(command.run)
+
+    def _addon_runner(self, run: Callable[["Editor"], str]) -> Callable[[], str]:
+        """Wrap an add-on command so a failure cannot break the editor."""
+
+        def call() -> str:
+            try:
+                return run(self)
+            except Exception:  # noqa: BLE001 - contained on purpose
+                return self._message(MSG_ADDON_FAILED)
+
+        return call
 
     # --- API for the interfaces ---------------------------------------------
 
+    def chord_pending(self) -> bool:
+        """Whether a multi-stroke chord is waiting for its next stroke."""
+        return self._keyboard.pending
+
     def press(self, keys: str) -> Result | None:
-        """Run the key stroke from the tables; None when it is unassigned."""
-        element = self._keyboard.resolve(keys)
+        """Run the key stroke from the tables; None when it is unassigned.
+
+        Returns a :class:`Result` with empty speech while a chord is still
+        being entered (the stroke is consumed but nothing happens yet).
+        """
+        outcome = self._keyboard.feed(keys)
+        if outcome.state is State.PENDING:
+            return self._result("")  # consumed; waiting for the next stroke
+        element = outcome.element
         if element is None:
             return None
         if element.type is ElementType.COMMAND:
@@ -115,8 +150,13 @@ class Editor:
         return self._result(self._cmd_read_line())
 
     def load(self, nodes: list[Node]) -> Result:
-        """Replace the document content (D imports); undoable."""
+        """Replace the document content with a single line (imports); undoable."""
         self.document.load(nodes)
+        return self._result(self._cmd_read_line())
+
+    def load_lines(self, lines: list[list[Node]]) -> Result:
+        """Replace the document with several lines (open .dvm); undoable."""
+        self.document.load_lines(lines)
         return self._result(self._cmd_read_line())
 
     # --- commands ------------------------------------------------------------
@@ -142,40 +182,96 @@ class Editor:
         return self._speaker.label("line_end")
 
     def _cmd_enter(self) -> str:
-        structure = self.document.enter()
-        if structure is None:
+        # Inside a matrix, Down moves to the cell below.
+        if self.document.current_matrix() is not None:
+            if self.document.move_in_matrix(1, 0) is not None:
+                return self._announce_cell()
             return self._read_current()
-        label = self._speaker.label("enter_structure")
-        return f"{label}: {self._speaker.label(structure.element_id)}"
+        container = self.document.enter()
+        if container is not None:
+            label = self._speaker.label("enter_structure")
+            return f"{label}: {self._speaker.label(container.element_id)}"
+        # At the top level, Down moves to the next document line.
+        if self.document.line_down():
+            return self._cmd_read_line()
+        return self._read_current()
 
     def _cmd_exit(self) -> str:
-        structure = self.document.exit()
-        if structure is None:
+        # Inside a matrix, Up moves to the cell above; from the top row it
+        # leaves the matrix.
+        if self.document.current_matrix() is not None:
+            if self.document.move_in_matrix(-1, 0) is not None:
+                return self._announce_cell()
+            self.document.exit()
             return self._read_current()
-        label = self._speaker.label("exit_structure")
-        return f"{label}: {self._speaker.label(structure.element_id)}"
+        container = self.document.exit()
+        if container is not None:
+            label = self._speaker.label("exit_structure")
+            return f"{label}: {self._speaker.label(container.element_id)}"
+        # At the top level, Up moves to the previous document line.
+        if self.document.line_up():
+            return self._cmd_read_line()
+        return self._read_current()
+
+    def _cmd_matrix(self) -> str:
+        """Insert a 2x2 matrix and enter its first cell."""
+        self.document.insert(Matrix("matrix", rows=2, cols=2, slots=[[], [], [], []]))
+        return f"{self._speaker.label('matrix')}, {self._announce_cell()}"
+
+    def _cmd_matrix_add_row(self) -> str:
+        if not self.document.matrix_add_row():
+            return self._read_current()
+        return self._speaker.label("matrix_add_row")
+
+    def _cmd_matrix_add_column(self) -> str:
+        if not self.document.matrix_add_column():
+            return self._read_current()
+        return self._speaker.label("matrix_add_column")
+
+    def _announce_cell(self) -> str:
+        """Speak the current matrix cell position, then read its content."""
+        cell = self.document.cursor_cell()
+        if cell is None:
+            return self._read_current()
+        row, column = cell
+        position = self._message("matrix_cell")
+        position = position.replace("{row}", str(row + 1)).replace("{column}", str(column + 1))
+        content = self._speaker.sequence(self.document.current_sequence())
+        return f"{position}: {content}"
+
+    def _cmd_new_line(self) -> str:
+        if not self.document.new_line():
+            return self._read_current()
+        return self._speaker.label("new_line")
 
     def _cmd_next_slot(self) -> str:
-        structure = self.document.current_structure()
-        if structure is None:
+        container = self.document.current_container()
+        if container is None:
             return self._read_current()
+        in_matrix = self.document.current_matrix() is not None
         slot_number = self.document.next_slot()
         if slot_number is None:
             label = self._speaker.label("exit_structure")
-            return f"{label}: {self._speaker.label(structure.element_id)}"
+            return f"{label}: {self._speaker.label(container.element_id)}"
+        if in_matrix:
+            return self._announce_cell()
         return f"{self._speaker.label(SLOT_ID)} {slot_number + 1}"
 
     def _cmd_delete(self) -> str:
         node = self.document.delete()
-        if node is None:
-            return self._read_current()
-        return f"{self._speaker.label('delete')}: {self._speaker.node(node)}"
+        if node is not None:
+            return f"{self._speaker.label('delete')}: {self._speaker.node(node)}"
+        if self.document.merge_with_next_line():
+            return self._cmd_read_line()
+        return self._read_current()
 
     def _cmd_backspace(self) -> str:
         node = self.document.backspace()
-        if node is None:
-            return self._speaker.label("line_start")
-        return f"{self._speaker.label('backspace')}: {self._speaker.node(node)}"
+        if node is not None:
+            return f"{self._speaker.label('backspace')}: {self._speaker.node(node)}"
+        if self.document.merge_with_previous_line():
+            return self._cmd_read_line()
+        return self._speaker.label("line_start")
 
     def _cmd_undo(self) -> str:
         self.document.undo()
@@ -217,16 +313,27 @@ def create_editor(
     language: str = "en",
     profile: str | None = None,
     reader: ExpressionReader | None = None,
+    keymap: str | None = None,
+    addons: Registry | bool = True,
+    user_keymap: Path | None = None,
 ) -> Editor:
     """Build an editor loading every table from the data directory.
 
     ``language`` resolves the language-dependent tables (falling back to
     the reference language, E6); ``profile`` limits elements by level (A7);
     ``reader`` optionally replaces the table speaker when reading a whole
-    expression (see :mod:`disvimat.backends`).
+    expression (see :mod:`disvimat.backends`); ``keymap`` loads a keyboard
+    profile that overrides the default strokes, so the editor can answer to
+    another editor's commands (Lambda, EDICO…); ``addons`` discovers
+    extensions (True), skips them (False), or takes a ready registry.
     """
     directory = directory or data_dir()
-    catalog = Catalog.load(directory / "elements.json")
+    registry = addons if isinstance(addons, Registry) else (load_addons() if addons else Registry())
+    # Add-on commands become catalogue elements, so key resolution and the
+    # user-level checks treat them exactly like built-in commands.
+    catalog = Catalog(
+        load_table(directory / "elements.json", Element).entries + registry.elements()
+    )
     level: int | None = None
     calculator_allowed = True
     if profile is not None:
@@ -240,9 +347,31 @@ def create_editor(
         load_table(directory / name, KeyEntry)
         for name in ("keys_signs.json", "keys_commands.json", "keys_numpad.json")
     ]
+    if keymap:
+        # The profile is loaded last, so its strokes win over the defaults;
+        # anything it leaves out keeps the built-in binding.
+        path = keymap_path(directory, keymap)
+        if not path.is_file():
+            raise ValueError(f"unknown keymap: {keymap!r}")
+        key_tables.append(load_table(path, KeyEntry))
+    if registry.key_entries():
+        key_tables.append(
+            Table[KeyEntry](table="keys_addons", version=1, entries=registry.key_entries())
+        )
+    # The user's own reassignments load last, so they win over everything
+    # (defaults, compatibility profile, add-ons). See disvimat.tools.rebind.
+    user_path = user_keymap or user_keymap_path()
+    if user_path is not None and user_path.is_file():
+        key_tables.append(load_table(user_path, KeyEntry))
     glyphs: Table[GlyphEntry] = load_table(directory / "glyphs.json", GlyphEntry)
-    labels: Table[LabelEntry] = load_table(
+    labels_table: Table[LabelEntry] = load_table(
         language_table_path(directory, "labels", language), LabelEntry
+    )
+    labels = Table[LabelEntry](
+        table=labels_table.table,
+        version=labels_table.version,
+        language=labels_table.language,
+        entries=[*labels_table.entries, *registry.label_entries(language)],
     )
     messages_table: Table[MessageEntry] = load_table(
         language_table_path(directory, "messages", language), MessageEntry
@@ -257,4 +386,5 @@ def create_editor(
         messages,
         calculator_allowed=calculator_allowed,
         reader=reader,
+        addons=registry,
     )

@@ -53,10 +53,18 @@
     { "id": "next_slot", "label": "siguiente hueco" },
     { "id": "delete", "label": "borrar" },
     { "id": "backspace", "label": "borrar hacia atrás" },
+    { "id": "new_line", "label": "nueva línea" },
     { "id": "undo", "label": "deshacer" },
     { "id": "redo", "label": "rehacer" },
     { "id": "read_element", "label": "leer elemento" },
     { "id": "read_line", "label": "leer línea" },
-    { "id": "calculate", "label": "resultado" }
+    { "id": "calculate", "label": "resultado" },
+    {
+      "id": "matrix",
+      "label": "matriz",
+      "parts": { "start": "matriz", "separator": "siguiente fila", "end": "fin de matriz" }
+    },
+    { "id": "matrix_add_row", "label": "añadir fila" },
+    { "id": "matrix_add_column", "label": "añadir columna" }
   ]
 }

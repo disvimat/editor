@@ -44,3 +44,6 @@ Desktop.ini
 
 # --- Registros ---
 *.log
+
+# --- JavaScript: dependencias de las pruebas del cliente web ---
+node_modules/

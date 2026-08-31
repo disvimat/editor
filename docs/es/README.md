@@ -9,6 +9,8 @@ maneras: en pantalla, hablada, en braille y en archivos exportables.
 
 - [Arquitectura](ARCHITECTURE.md) — cómo está construido el proyecto y por qué.
 - [Tablas](TABLES.md) — los datos que gobiernan el comportamiento del editor.
+- [Formato de documento](DOCUMENT.md) — documentos multilínea y el formato `.dvm`.
+- [Add-ons](ADDONS.md) — ampliar el editor sin tocar el núcleo.
 - [Estado](STATUS.md) — qué está hecho y qué falta.
 - [MathCAT](MATHCAT.md) — el motor externo de voz y braille.
 
@@ -44,9 +46,22 @@ Dos variables de entorno configuran ambas interfaces:
 |---|---|---|
 | `DISVIMAT_LANG` | idioma de interfaz y de voz | `en` (por defecto), `es`, `fr` |
 | `DISVIMAT_PROFILE` | perfil de usuario (A7) | `beginner`, `intermediate`, `advanced`, `exam` |
+| `DISVIMAT_KEYMAP` | perfil de teclado — comandos de otro editor | `lambda`, `edico` (ver `data/keymaps/`) |
+| `DISVIMAT_ADDONS` | carpeta de scripts de add-on | una ruta (ver [ADDONS](ADDONS.md)) |
 | `DISVIMAT_DATA` | directorio de tablas | una ruta; por defecto `data/` |
 
 En la web el idioma también es un parámetro: `http://127.0.0.1:8000/?language=es`.
+
+## La voz y el lector de pantalla
+
+El editor **habla cada acción** a través de su lector de pantalla (NVDA,
+JAWS) o de SAPI: el signo o la estructura insertados, el hueco al que se ha
+movido, el resultado de un cálculo y la palabra que termina al pulsar
+espacio. Además envía la línea actual a la línea braille conectada.
+
+Para ello hace falta `accessible_output2`, que instala el extra
+`[desktop]`. Si falta, el editor sigue funcionando, pero la información solo
+aparece en la barra de estado, que el lector de pantalla no lee por sí solo.
 
 ## Teclas
 
@@ -68,6 +83,8 @@ mismos en todos los idiomas y en las dos interfaces.
 | `Ctrl+L` / `Ctrl+Shift+L` | Leer el elemento / la línea completa |
 | `Ctrl+Intro` | Calcular el resultado |
 | `Ctrl+I` / `Ctrl+E` | Importar / exportar XHTML (escritorio) |
+| `Ctrl+Shift+M` | Insertar una matriz |
+| `Alt+Abajo` / `Alt+Derecha` | Añadir fila / columna |
 | `Ctrl+6` | Ventana braille (escritorio) |
 
 El bloque numérico también lleva `+`, `−`, `×` y `÷` (este último inserta

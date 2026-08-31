@@ -72,9 +72,24 @@ nœuds. Le document étant structurel et non textuel, se déplacer par
 structure, sélectionner un numérateur ou transcrire en braille sont des
 opérations naturelles, et non de la chirurgie de chaînes.
 
-Annuler et rétablir travaillent sur des instantanés de l'arbre entier :
-simple, correct et largement assez rapide pour une expression
-mathématique.
+Annuler et rétablir travaillent sur des instantanés du document entier,
+mais un instantané **ne copie pas l'arbre** : il garde des références aux
+lignes. Une frappe ne change qu'une ligne, donc celle-ci reçoit une copie
+privée au moment où elle est modifiée, et seulement alors
+(*copy-on-write*) ; les autres lignes sont partagées avec l'historique.
+
+Copier l'arbre entier à chaque frappe était simple et correct tant qu'un
+document tenait en une expression ; avec des documents multilignes, le coût
+de la saisie croissait avec la longueur du document, ce qui, au-delà de
+quelques centaines de nœuds, se ressent comme une latence à la frappe.
+
+La règle qui fonde le dessin : **une ligne qu'un instantané référence
+encore ne doit jamais être modifiée sur place**. C'est pourquoi les
+méthodes d'édition appellent `_edit(...)` *avant* de prendre la moindre
+référence à une ligne, à un emplacement ou à une matrice.
+`tests/test_document.py` vérifie l'invariant — aucune ligne marquée privée
+n'est atteignable depuis un instantané — après chaque opération d'une
+session longue et variée.
 
 ## Le cycle d'édition
 
@@ -82,7 +97,9 @@ Chaque frappe suit le même chemin dans les deux interfaces :
 
 1. L'interface normalise l'événement vers la **forme canonique** des
    tables : `"Left"`, `"Ctrl+F"`, `"+"`. Ces noms sont en anglais et ne
-   sont jamais traduits.
+   sont jamais traduits. Ce que chaque plateforme envoie pour chaque nom
+   vit dans `data/keys_platform.json`, que lisent les deux adaptateurs :
+   c'est ce qui les empêche de diverger sur une même touche physique.
 2. `Keyboard.resolve` la convertit en élément du catalogue, en respectant
    le niveau du profil d'utilisateur (A7).
 3. `Editor.press` l'applique : une commande s'exécute, ou un signe ou une

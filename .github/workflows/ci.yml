@@ -7,6 +7,7 @@ on:
 
 jobs:
   checks:
+    name: Core and web (Linux)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -16,9 +17,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      # The desktop extra (wxPython) is left out on purpose: it needs GTK
-      # build dependencies and the core plus the web adapter are enough to
-      # run every automated test.
+      # The desktop extra (wxPython) is left out here: it needs GTK build
+      # dependencies on Linux. The desktop job below covers it on Windows,
+      # which is the platform it is actually used on.
       - name: Install dependencies
         run: pip install -e ".[web,dev]"
       - name: Lint (ruff)
@@ -28,4 +29,61 @@ jobs:
       - name: Types (mypy)
         run: mypy
       - name: Tests (pytest)
+        run: pytest
+
+  web-client:
+    name: Web client (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # The client is TypeScript under src/web-client; what ships is the
+      # bundle built from it, which is committed so that installing the
+      # Python package is enough to run the editor. The tests evaluate that
+      # bundle against the real page in jsdom; see tests/js/harness.js.
+      - name: Install dependencies
+        run: npm ci
+      # The Pyodide tests run the real wheel built from this tree: the same
+      # Python package the desktop runs, compiled to WebAssembly. Without
+      # the wheel they would skip themselves, so the variable below turns
+      # a missing one into a failure.
+      - name: Build the wheel the browser will load
+        run: |
+          pip install build
+          python -m build --wheel -o dist
+      - name: Types (tsc)
+        run: npm run typecheck
+      - name: Tests (vitest, over a fresh build)
+        env:
+          DISVIMAT_REQUIRE_WHEEL: "1"
+        run: npm test
+      - name: The committed bundle matches its sources
+        run: git diff --exit-code -- src/disvimat/web/static/editor.js
+
+  desktop:
+    name: Desktop (Windows + wxPython)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # wxPython ships Windows wheels, so this is a download rather than a
+      # build. This job exists because the desktop is the interface blind
+      # users reach through NVDA, on Windows: leaving it untested on the
+      # platform it ships for was the largest hole in this pipeline.
+      - name: Install dependencies
+        run: pip install -e ".[desktop,web,dev]"
+      - name: Tests (pytest)
+        # Without this the desktop tests skip themselves when wxPython is
+        # missing, and a broken install would report a green build while
+        # testing nothing. Here they must run.
+        env:
+          DISVIMAT_REQUIRE_DESKTOP: "1"
         run: pytest

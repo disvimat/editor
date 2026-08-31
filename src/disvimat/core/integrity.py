@@ -39,3 +39,53 @@ def key_conflicts(*tables: Table[KeyEntry]) -> dict[str, list[str]]:
         for (keys, condition), ids in by_stroke.items()
         if len(ids) > 1
     }
+
+
+def unsupported_conditions(*tables: Table[KeyEntry]) -> dict[str, list[str]]:
+    """Bindings that carry a condition, which nothing can honour yet.
+
+    The A3 conditions grammar is not implemented: :class:`Keyboard` loads
+    only unconditional entries, so a conditional binding does nothing at
+    all. It neither works nor complains, which is the worst way for a table
+    to be wrong — the author reads the table, sees the binding, and has no
+    reason to doubt it.
+
+    The rest of this module exists so an inconsistent table breaks the
+    build rather than the user. This is the same idea applied to a feature
+    that is merely absent: until the grammar exists, a table asking for it
+    fails the build instead of going quiet. Remove this check when
+    conditions are implemented.
+
+    Returns ``{condition: [ids that ask for it]}``.
+    """
+    by_condition: dict[str, list[str]] = {}
+    for table in tables:
+        for entry in table.entries:
+            if entry.condition is not None:
+                by_condition.setdefault(entry.condition, []).append(entry.id)
+    return by_condition
+
+
+def chord_shadow_conflicts(*tables: Table[KeyEntry]) -> dict[str, str]:
+    """Chords where one binding makes another unreachable.
+
+    ``"Ctrl+G"`` and ``"Ctrl+G, P"`` cannot both work: after ``Ctrl+G`` the
+    editor either fires the first or waits for the second, never both. This
+    reports ``{shorter chord: longer chord}`` for every such overlap, so a
+    reassignment tool can refuse it. It complements :func:`key_conflicts`,
+    which catches identical bindings.
+    """
+    from disvimat.core.keyboard import parse_chord
+
+    sequences: dict[tuple[str, ...], str] = {}
+    for table in tables:
+        for entry in table.entries:
+            if entry.condition is None:
+                sequences[parse_chord(entry.keys)] = entry.keys
+    conflicts: dict[str, str] = {}
+    for sequence, keys in sequences.items():
+        for length in range(1, len(sequence)):
+            prefix = sequence[:length]
+            if prefix in sequences:
+                conflicts[sequences[prefix]] = keys
+    return conflicts

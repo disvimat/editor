@@ -19,6 +19,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from disvimat.core.dvm import DvmError, from_dvm
+from disvimat.core.editor import Editor, create_editor
 from disvimat.core.liblouis import Liblouis, LiblouisText, LiblouisUnavailable
 from disvimat.core.mathcat import MathCATBackend, MathCATUnavailable, _Library
 from disvimat.core.output import BrailleProvider, ExpressionReader
@@ -112,3 +114,77 @@ def create_outputs(
         speech_backend=speech_backend,
         braille_backend=braille_backend,
     )
+
+
+@dataclass(frozen=True)
+class Workspace:
+    """An editor together with the settings its document is worked on under.
+
+    Language and profile belong to the **document**, not to a session. A
+    teacher hands over an exam file; the student opens it anywhere and
+    finds the restrictions the file carries, because opening it builds the
+    editor those restrictions describe. Saving writes them back, so they
+    survive the round trip instead of lasting one sitting.
+    """
+
+    editor: Editor
+    braille: BrailleProvider | None
+    language: str
+    profile: str | None
+    speech_backend: str
+    braille_backend: str
+
+
+def create_workspace(
+    *,
+    language: str = "en",
+    profile: str | None = None,
+    keymap: str | None = None,
+    directory: Path | None = None,
+) -> Workspace:
+    """Build an editor and its engines for one language and profile."""
+    directory = directory or data_dir()
+    catalog = Catalog.load(directory / "elements.json")
+    outputs = create_outputs(catalog, language, directory=directory)
+    editor = create_editor(
+        directory=directory,
+        language=language,
+        profile=profile,
+        reader=outputs.reader,
+        keymap=keymap,
+    )
+    return Workspace(
+        editor=editor,
+        braille=outputs.braille,
+        language=language,
+        profile=profile,
+        speech_backend=outputs.speech_backend,
+        braille_backend=outputs.braille_backend,
+    )
+
+
+def open_document(
+    dvm: str, *, keymap: str | None = None, directory: Path | None = None
+) -> Workspace:
+    """Open a ``.dvm`` under the language and profile it declares.
+
+    This is what makes an exam file an exam file. The restrictions are not
+    a setting of the machine the student happens to sit at: they are in the
+    document, and opening it applies them. The language matters just as
+    much — mathematical braille is normative and differs by country, so
+    reading a Spanish document under an English editor would transcribe it
+    into UEB instead of CMU.
+    """
+    document = from_dvm(dvm)
+    try:
+        workspace = create_workspace(
+            language=document.language,
+            profile=document.profile,
+            keymap=keymap,
+            directory=directory,
+        )
+    except ValueError as error:
+        # An unknown profile is a malformed document, not a crash.
+        raise DvmError(str(error)) from error
+    workspace.editor.load_lines(document.lines)
+    return workspace

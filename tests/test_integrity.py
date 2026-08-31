@@ -9,7 +9,12 @@ from pathlib import Path
 import pytest
 
 from disvimat.core.elements import ElementType
-from disvimat.core.integrity import key_conflicts, uncovered_ids, unknown_ids
+from disvimat.core.integrity import (
+    key_conflicts,
+    uncovered_ids,
+    unknown_ids,
+    unsupported_conditions,
+)
 from disvimat.core.tables import (
     BrailleEntry,
     Catalog,
@@ -100,3 +105,48 @@ def test_no_key_stroke_conflicts(
 ) -> None:
     keys_numpad = load_table(DATA / "keys_numpad.json", KeyEntry)
     assert key_conflicts(keys_signs, keys_commands, keys_numpad) == {}
+
+
+def test_no_table_asks_for_the_conditions_grammar() -> None:
+    """A3 is not implemented, so a conditional binding does nothing at all.
+
+    Every other check here keeps an *inconsistent* table from the user;
+    this one keeps a table from quietly relying on a feature that is merely
+    absent. Delete it when the grammar exists.
+    """
+    tables = [
+        load_table(DATA / name, KeyEntry)
+        for name in ("keys_signs.json", "keys_commands.json", "keys_numpad.json")
+    ]
+    tables += [load_table(path, KeyEntry) for path in sorted((DATA / "keymaps").glob("*.json"))]
+    ignored = unsupported_conditions(*tables)
+    assert ignored == {}, (
+        f"these bindings would be silently dropped by Keyboard: {ignored}. "
+        "The A3 conditions grammar is not implemented yet."
+    )
+
+
+def test_a_condition_is_reported_rather_than_dropped_in_silence() -> None:
+    table = Table[KeyEntry](
+        table="keys_test",
+        version=1,
+        entries=[
+            KeyEntry(id="left", keys="Left"),
+            KeyEntry(id="delete", keys="Backspace", condition="in_matrix"),
+        ],
+    )
+    assert unsupported_conditions(table) == {"in_matrix": ["delete"]}
+
+
+def test_the_keyboard_really_does_drop_it() -> None:
+    """The reason the check above has to exist."""
+    from disvimat.core.keyboard import Keyboard
+
+    catalog = Catalog.load(DATA / "elements.json")
+    table = Table[KeyEntry](
+        table="keys_test",
+        version=1,
+        entries=[KeyEntry(id="left", keys="Ctrl+Shift+Y", condition="in_matrix")],
+    )
+    keyboard = Keyboard(catalog, table)
+    assert keyboard.feed("Ctrl+Shift+Y").element is None

@@ -7,7 +7,15 @@ with the glyph of the ``slot`` element.
 
 import re
 
-from disvimat.core.document import Character, Document, Node, Sign, Structure
+from disvimat.core.document import (
+    Character,
+    Container,
+    Document,
+    Matrix,
+    Node,
+    Sign,
+    Structure,
+)
 from disvimat.core.elements import SLOT_ID
 from disvimat.core.tables import GlyphEntry, Table
 
@@ -22,12 +30,25 @@ class Presenter:
         self._templates = {entry.id: entry.template for entry in glyphs.entries if entry.template}
 
     def render(self, document: Document) -> tuple[str, int]:
-        """The full linear text and the cursor offset inside it."""
-        text, position = self._sequence(
-            document.root, document.cursor_path(), document.cursor_index()
-        )
-        assert position is not None, "the cursor did not show up during rendering"
-        return text, position
+        """The full multi-line text and the global cursor offset in it.
+
+        Lines are joined with ``\\n``; the caret offset counts those
+        separators so the interface can place it in a multi-line control.
+        """
+        rendered: list[str] = []
+        position: int | None = None
+        offset = 0
+        for number, line in enumerate(document.lines):
+            if number == document.cursor_line():
+                text, inner = self._sequence(line, document.cursor_path(), document.cursor_index())
+                assert inner is not None, "the cursor did not show up during rendering"
+                position = offset + inner
+            else:
+                text = self.text(line)
+            rendered.append(text)
+            offset += len(text) + 1  # + 1 for the newline separator
+        assert position is not None
+        return "\n".join(rendered), position
 
     def glyph(self, element_id: str) -> str:
         return self._glyphs.get(element_id, "?")
@@ -49,7 +70,7 @@ class Presenter:
             if not path and i == index:
                 position = sum(map(len, parts))
             if i == target_node:
-                assert isinstance(node, Structure)
+                assert isinstance(node, Container)
                 text, inner = self._structure_with_cursor(node, path, index)
                 if inner is not None:
                     position = sum(map(len, parts)) + inner
@@ -61,7 +82,7 @@ class Presenter:
         return "".join(parts), position
 
     def _structure_with_cursor(
-        self, structure: Structure, path: list[tuple[int, int]], index: int
+        self, structure: Container, path: list[tuple[int, int]], index: int
     ) -> tuple[str, int | None]:
         target_slot = path[0][1]
         parts: list[str] = []
@@ -90,7 +111,7 @@ class Presenter:
                 return text
             case Sign(element_id=element_id):
                 return self.glyph(element_id)
-            case Structure():
+            case Structure() | Matrix():
                 return "".join(
                     piece if isinstance(piece, str) else self._slot(node.slots[piece])
                     for piece in self._pieces(node)
@@ -101,8 +122,11 @@ class Presenter:
             return self.glyph(SLOT_ID)
         return "".join(self._node(node) for node in nodes)
 
-    def _pieces(self, structure: Structure) -> list[str | int]:
-        """Split the template into literals and slot indices (zero based)."""
+    def _pieces(self, container: Container) -> list[str | int]:
+        """Literals and slot indices to render a container (cursor-agnostic)."""
+        if isinstance(container, Matrix):
+            return self._matrix_pieces(container)
+        structure = container
         template = self._templates.get(structure.element_id)
         if template is None:
             inner = ";".join(f"{{{n + 1}}}" for n in range(len(structure.slots)))
@@ -116,4 +140,17 @@ class Presenter:
             previous_end = mark.end()
         if previous_end < len(template):
             pieces.append(template[previous_end:])
+        return pieces
+
+    def _matrix_pieces(self, matrix: Matrix) -> list[str | int]:
+        """Render a matrix as ``[a,b;c,d]``: comma between cells, ; between rows."""
+        pieces: list[str | int] = ["["]
+        for row in range(matrix.rows):
+            if row > 0:
+                pieces.append(";")
+            for col in range(matrix.cols):
+                if col > 0:
+                    pieces.append(",")
+                pieces.append(row * matrix.cols + col)
+        pieces.append("]")
         return pieces

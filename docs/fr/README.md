@@ -10,6 +10,8 @@ dans des fichiers exportables.
 
 - [Architecture](ARCHITECTURE.md) — comment le projet est construit, et pourquoi.
 - [Tables](TABLES.md) — les données qui régissent le comportement de l'éditeur.
+- [Format de document](DOCUMENT.md) — documents multi-lignes et le format `.dvm`.
+- [Extensions](ADDONS.md) — enrichir l'éditeur sans toucher au noyau.
 - [État](STATUS.md) — ce qui est fait et ce qui manque.
 - [MathCAT](MATHCAT.md) — le moteur externe de parole et de braille.
 
@@ -45,9 +47,22 @@ Deux variables d'environnement configurent les deux interfaces :
 |---|---|---|
 | `DISVIMAT_LANG` | langue de l'interface et de la voix | `en` (par défaut), `es`, `fr` |
 | `DISVIMAT_PROFILE` | profil d'utilisateur (A7) | `beginner`, `intermediate`, `advanced`, `exam` |
+| `DISVIMAT_KEYMAP` | profil clavier — commandes d'un autre éditeur | `lambda`, `edico` (voir `data/keymaps/`) |
+| `DISVIMAT_ADDONS` | dossier de scripts d'extension | un chemin (voir [ADDONS](ADDONS.md)) |
 | `DISVIMAT_DATA` | répertoire des tables | un chemin ; `data/` par défaut |
 
 Sur le web, la langue est aussi un paramètre : `http://127.0.0.1:8000/?language=fr`.
+
+## La parole et le lecteur d'écran
+
+L'éditeur **oralise chaque action** via votre lecteur d'écran (NVDA, JAWS)
+ou SAPI : le signe ou la structure insérés, la case atteinte, le résultat
+d'un calcul et le mot terminé par une espace. Il envoie aussi la ligne
+courante à l'afficheur braille connecté.
+
+Cela nécessite `accessible_output2`, installé par l'extra `[desktop]`. S'il
+manque, l'éditeur fonctionne toujours, mais le retour n'apparaît que dans la
+barre d'état, que le lecteur d'écran ne lit pas de lui-même.
 
 ## Touches
 
@@ -69,6 +84,8 @@ donc identiques dans toutes les langues et dans les deux interfaces.
 | `Ctrl+L` / `Ctrl+Shift+L` | Lire l'élément / toute la ligne |
 | `Ctrl+Entrée` | Calculer le résultat |
 | `Ctrl+I` / `Ctrl+E` | Importer / exporter du XHTML (bureau) |
+| `Ctrl+Maj+M` | Insérer une matrice |
+| `Alt+Bas` / `Alt+Droite` | Ajouter ligne / colonne |
 | `Ctrl+6` | Fenêtre braille (bureau) |
 
 Le pavé numérique porte aussi `+`, `−`, `×` et `÷` (ce dernier insère une

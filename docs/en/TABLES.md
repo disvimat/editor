@@ -32,6 +32,7 @@ Every table looks the same:
 | `keys_signs.json` | A2 | sign or structure → key stroke |
 | `keys_commands.json` | A3 | command → key stroke |
 | `keys_numpad.json` | A4 | numeric-keypad alternatives |
+| `keys_platform.json` | A2-A4 | canonical stroke name → what wx and the browser send |
 | `profiles.json` | A7 | profiles → maximum level and calculator lock |
 | `glyphs.json` | B1 | glyph and linear template |
 | `labels.<lang>.json` | B2 | speech label (with `parts` for structures) |
@@ -60,6 +61,33 @@ Edit the `keys` value in the relevant table. The names are canonical
 (`Ctrl+F`, `Left`, `NumAdd`) and are the same on desktop and web. Tests
 reject a stroke assigned twice.
 
+A stroke may be a **chord**: a comma-separated sequence like `"Ctrl+G, P"`
+(the convention EDICO uses for Greek letters and titles). The first stroke
+leaves the keyboard waiting; the next completes it. A chord and a plain
+binding cannot overlap — `"Ctrl+G"` and `"Ctrl+G, P"` together are rejected,
+because after `Ctrl+G` the editor can only do one thing.
+
+### Reassign a key as a user, without conflicts
+
+A user does not edit the shipped tables. Their personal reassignments live
+in a keymap the editor loads **last**, so a user binding wins over the
+defaults, a compatibility profile (Lambda, EDICO) and add-ons. The file is
+`$DISVIMAT_USER_KEYMAP` or `~/.disvimat/user_keys.json`.
+
+The `rebind` tool edits it safely:
+
+```bash
+python -m disvimat.tools.rebind show "Ctrl+F"      # what a stroke does
+python -m disvimat.tools.rebind set fraction "Ctrl+B"
+python -m disvimat.tools.rebind clear fraction
+python -m disvimat.tools.rebind list
+```
+
+Before saving, it **refuses** a binding that cannot work (an unknown
+command, or a chord that would shadow another) and **warns** when the new
+stroke was already used by another command, naming the one that loses it —
+so a reassignment is deliberate, never silent.
+
 ### Add a language
 
 Copy `labels.en.json`, `messages.en.json` and `ui.en.json` to your language
@@ -79,7 +107,7 @@ braille features.
 > **Important.** The current values of `br6.es.json` are **provisional**
 > and must be reviewed against the CBE (Comisión Braille Española)
 > mathematical braille standard before classroom use. The ASCII encoding of
-> the `.BRA` export is likewise the provisional NABCC one.
+> the braille export is Unicode (U+2800…, `.brl`).
 
 ## How structures are described
 

@@ -9,6 +9,8 @@ ways: on screen, as speech, in braille and as exportable files.
 
 - [Architecture](ARCHITECTURE.md) — how the project is built and why.
 - [Tables](TABLES.md) — the data that drives the editor's behaviour.
+- [Document format](DOCUMENT.md) — multi-line documents and the `.dvm` format.
+- [Add-ons](ADDONS.md) — extending the editor without touching the core.
 - [Status](STATUS.md) — what is done and what is missing.
 - [MathCAT](MATHCAT.md) — the external speech and braille engine.
 
@@ -44,9 +46,22 @@ Two environment variables configure both interfaces:
 |---|---|---|
 | `DISVIMAT_LANG` | interface and speech language | `en` (default), `es`, `fr` |
 | `DISVIMAT_PROFILE` | user profile (A7) | `beginner`, `intermediate`, `advanced`, `exam` |
+| `DISVIMAT_KEYMAP` | keyboard profile — another editor's commands | `lambda`, `edico` (see `data/keymaps/`) |
+| `DISVIMAT_ADDONS` | folder of add-on scripts | a path (see [ADDONS](ADDONS.md)) |
 | `DISVIMAT_DATA` | table directory | a path; defaults to `data/` |
 
 On the web the language is also a query parameter: `http://127.0.0.1:8000/?language=fr`.
+
+## Speech and the screen reader
+
+The editor **speaks every action** through your screen reader (NVDA, JAWS)
+or SAPI: the sign or structure inserted, the blank you moved to, the result
+of a calculation, and the word you finish when you press space. It also
+pushes the current line to a connected braille display.
+
+That needs `accessible_output2`, which the `[desktop]` extra installs. If it
+is missing the editor still works, but the feedback only appears in the
+status bar — which a screen reader does not read on its own.
 
 ## Keys
 
@@ -68,6 +83,8 @@ every language and in both interfaces.
 | `Ctrl+L` / `Ctrl+Shift+L` | Read the element / the whole line |
 | `Ctrl+Enter` | Calculate the result |
 | `Ctrl+I` / `Ctrl+E` | Import / export XHTML (desktop) |
+| `Ctrl+Shift+M` | Insert a matrix |
+| `Alt+Down` / `Alt+Right` | Add a matrix row / column |
 | `Ctrl+6` | Braille window (desktop) |
 
 The numeric keypad also carries `+`, `−`, `×` and `÷` (the latter inserts a

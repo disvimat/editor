@@ -19,10 +19,12 @@ def test_empty_document() -> None:
 
 def test_linear_rendering_with_template() -> None:
     document = Document()
-    document.root = [
-        Character("1"),
-        Sign("plus"),
-        Structure("fraction", [[Character("2")], [Character("3")]]),
+    document.lines = [
+        [
+            Character("1"),
+            Sign("plus"),
+            Structure("fraction", [[Character("2")], [Character("3")]]),
+        ]
     ]
     text, position = presenter().render(document)
     assert text == "1+(2∕3)"
@@ -31,7 +33,7 @@ def test_linear_rendering_with_template() -> None:
 
 def test_empty_slot_uses_the_slot_glyph() -> None:
     document = Document()
-    document.root = [Structure("fraction", [[Character("2")], []])]
+    document.lines = [[Structure("fraction", [[Character("2")], []])]]
     text, _ = presenter().render(document)
     assert text == "(2∕□)"
 
@@ -53,6 +55,6 @@ def test_structure_without_template_uses_the_generic_form() -> None:
         entries=[GlyphEntry(id="slot", glyph="□"), GlyphEntry(id="box", glyph="◧")],
     )
     document = Document()
-    document.root = [Structure("box", [[Character("1")], []])]
+    document.lines = [[Structure("box", [[Character("1")], []])]]
     text, _ = Presenter(table).render(document)
     assert text == "◧(1;□)"

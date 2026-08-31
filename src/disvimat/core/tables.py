@@ -36,6 +36,36 @@ class KeyEntry(Record):
     condition: str | None = None
 
 
+class PlatformKeyEntry(Record):
+    """A2-A4: one canonical stroke name, and how each interface produces it.
+
+    The ``keys`` of every other table are canonical names ("Left",
+    "NumDivide"), but the desktop and the web receive different things from
+    their platform: wx sends key codes, the browser sends ``KeyboardEvent``
+    fields. Keeping both mappings here means the two interfaces cannot
+    drift into answering the same physical key differently — which they had
+    already done over the numeric keypad.
+
+    ``dom_code`` matches ``KeyboardEvent.code`` and ``dom_key`` matches
+    ``KeyboardEvent.key``. The keypad needs the first: a browser reports
+    the keypad's division key as ``key`` ``"/"``, exactly like the one on
+    the main row, and only ``code`` tells them apart.
+    """
+
+    canonical: str = Field(pattern=r"^[A-Z][A-Za-z]*$")
+    dom_key: str | None = None
+    dom_code: str | None = None
+    wx: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def _reachable_everywhere(self) -> Self:
+        if self.dom_key is None and self.dom_code is None:
+            raise ValueError(f"{self.canonical}: the browser could never produce it")
+        if not self.wx:
+            raise ValueError(f"{self.canonical}: the desktop could never produce it")
+        return self
+
+
 class GlyphEntry(Record):
     """B1: glyph used to present a sign or structure in linear editing.
 
@@ -192,6 +222,39 @@ class Catalog:
         return [element for element in self if element.type is element_type]
 
 
+#: Environment override for the user's personal keymap file.
+USER_KEYMAP_ENV = "DISVIMAT_USER_KEYMAP"
+
+
+def user_keymap_path() -> Path:
+    """The file that holds the user's own key reassignments.
+
+    ``$DISVIMAT_USER_KEYMAP`` wins; otherwise ``~/.disvimat/user_keys.json``.
+    The file may not exist — the editor simply ignores it when absent.
+    """
+    override = os.environ.get(USER_KEYMAP_ENV)
+    if override:
+        return Path(override)
+    return Path.home() / ".disvimat" / "user_keys.json"
+
+
+def keymap_path(directory: Path, keymap: str) -> Path:
+    """Path of a keyboard profile (``data/keymaps/<name>.json``).
+
+    Keymaps let the editor answer to the same key strokes as another
+    editor (Lambda, EDICO…), so a user can migrate without relearning.
+    """
+    return directory / "keymaps" / f"{keymap}.json"
+
+
+def available_keymaps(directory: Path) -> list[str]:
+    """The keyboard profiles shipped in the data directory, sorted."""
+    folder = directory / "keymaps"
+    if not folder.is_dir():
+        return []
+    return sorted(path.stem for path in folder.glob("*.json"))
+
+
 def language_table_path(directory: Path, name: str, language: str) -> Path:
     """Path of a language-dependent table, falling back to the reference one.
 
@@ -206,12 +269,17 @@ def language_table_path(directory: Path, name: str, language: str) -> Path:
 
 
 def data_dir() -> Path:
-    """Table directory: ``$DISVIMAT_DATA`` or the project's ``data/``.
+    """Table directory, in order: ``$DISVIMAT_DATA``, packaged, checkout.
 
-    Resolving relative to the code serves the editable development
-    install; packaged applications should set the environment variable.
+    An installed application (wheel, frozen ``.exe``) carries the tables
+    inside the package; a development checkout has them at the repository
+    root. Trying the packaged copy first means neither case needs the
+    environment variable, which stays available to point at edited tables.
     """
     from_environment = os.environ.get("DISVIMAT_DATA")
     if from_environment:
         return Path(from_environment)
+    packaged = Path(__file__).resolve().parents[1] / "data"
+    if packaged.is_dir():
+        return packaged
     return Path(__file__).resolve().parents[3] / "data"

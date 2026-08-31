@@ -1,0 +1,46 @@
+{
+  "table": "keys_platform",
+  "version": 1,
+  "language": null,
+  "entries": [
+    { "id": "left", "canonical": "Left", "dom_key": "ArrowLeft", "wx": ["WXK_LEFT"] },
+    { "id": "right", "canonical": "Right", "dom_key": "ArrowRight", "wx": ["WXK_RIGHT"] },
+    { "id": "up", "canonical": "Up", "dom_key": "ArrowUp", "wx": ["WXK_UP"] },
+    { "id": "down", "canonical": "Down", "dom_key": "ArrowDown", "wx": ["WXK_DOWN"] },
+    { "id": "home", "canonical": "Home", "dom_key": "Home", "wx": ["WXK_HOME"] },
+    { "id": "end", "canonical": "End", "dom_key": "End", "wx": ["WXK_END"] },
+    { "id": "tab", "canonical": "Tab", "dom_key": "Tab", "wx": ["WXK_TAB"] },
+    { "id": "delete", "canonical": "Delete", "dom_key": "Delete", "wx": ["WXK_DELETE"] },
+    { "id": "backspace", "canonical": "Backspace", "dom_key": "Backspace", "wx": ["WXK_BACK"] },
+    {
+      "id": "return",
+      "canonical": "Return",
+      "dom_key": "Enter",
+      "wx": ["WXK_RETURN", "WXK_NUMPAD_ENTER"]
+    },
+    {
+      "id": "num_add",
+      "canonical": "NumAdd",
+      "dom_code": "NumpadAdd",
+      "wx": ["WXK_NUMPAD_ADD"]
+    },
+    {
+      "id": "num_subtract",
+      "canonical": "NumSubtract",
+      "dom_code": "NumpadSubtract",
+      "wx": ["WXK_NUMPAD_SUBTRACT"]
+    },
+    {
+      "id": "num_multiply",
+      "canonical": "NumMultiply",
+      "dom_code": "NumpadMultiply",
+      "wx": ["WXK_NUMPAD_MULTIPLY"]
+    },
+    {
+      "id": "num_divide",
+      "canonical": "NumDivide",
+      "dom_code": "NumpadDivide",
+      "wx": ["WXK_NUMPAD_DIVIDE"]
+    }
+  ]
+}

@@ -3,8 +3,25 @@
   "version": 1,
   "language": "fr",
   "entries": [
-    { "id": "expression_not_computable", "text": "l'expression ne peut pas être calculée" },
-    { "id": "division_by_zero", "text": "division par zéro" },
-    { "id": "calculator_locked", "text": "calculatrice verrouillée" }
+    {
+      "id": "expression_not_computable",
+      "text": "l'expression ne peut pas être calculée"
+    },
+    {
+      "id": "division_by_zero",
+      "text": "division par zéro"
+    },
+    {
+      "id": "calculator_locked",
+      "text": "calculatrice verrouillée"
+    },
+    {
+      "id": "addon_failed",
+      "text": "l'extension n'a pas pu s'exécuter"
+    },
+    {
+      "id": "matrix_cell",
+      "text": "ligne {row} colonne {column}"
+    }
   ]
 }
