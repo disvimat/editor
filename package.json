@@ -4,10 +4,17 @@
   "description": "Tests for the DISVIMAT web client (src/disvimat/web/static).",
   "type": "module",
   "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@types/node": "^26.4.0",
     "jsdom": "^26.0.0",
+    "pyodide": "^314.0.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
     "vitest": "^4.0.0"
   }
 }

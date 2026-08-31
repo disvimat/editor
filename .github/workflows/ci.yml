@@ -32,7 +32,7 @@ jobs:
         run: pytest
 
   web-client:
-    name: Web client (JavaScript)
+    name: Web client (TypeScript)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,14 +40,18 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-      # editor.js is the only part of the editor that does not run under
-      # Python, and it carries the announcements a screen reader depends
-      # on. The tests evaluate the real file against the real page in
-      # jsdom; see tests/js/harness.js.
+      # The client is TypeScript under src/web-client; what ships is the
+      # bundle built from it, which is committed so that installing the
+      # Python package is enough to run the editor. The tests evaluate that
+      # bundle against the real page in jsdom; see tests/js/harness.js.
       - name: Install dependencies
         run: npm ci
-      - name: Tests (vitest)
+      - name: Types (tsc)
+        run: npm run typecheck
+      - name: Tests (vitest, over a fresh build)
         run: npm test
+      - name: The committed bundle matches its sources
+        run: git diff --exit-code -- src/disvimat/web/static/editor.js
 
   desktop:
     name: Desktop (Windows + wxPython)

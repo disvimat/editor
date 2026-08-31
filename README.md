@@ -61,11 +61,17 @@ integrity tests will tell you if anything is missing. See
 .venv/bin/pytest            # tests
 ```
 
-The web client is the one part that does not run under Python. Its tests
-evaluate the real `editor.js` against the real page in jsdom:
+The web client is the one part that does not run under Python. It is
+**TypeScript** under `src/web-client/`; what ships is the bundle built from
+it at `src/disvimat/web/static/editor.js`, which is committed so that
+installing the Python package is enough to run the editor — a teacher
+starting it from `arrancar.bat` needs no Node. The tests build first and
+then evaluate that bundle against the real page in jsdom, so they always
+exercise what ships:
 
 ```bash
 npm install
+npm run typecheck
 npm test
 ```
 
